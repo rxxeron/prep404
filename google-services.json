@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "508019570429",
+    "project_id": "prep404fcm",
+    "storage_bucket": "prep404fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508019570429:android:5a1c2e47e4973c62fbf094",
+        "android_client_info": {
+          "package_name": "com.rxxxeron.prep404"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAksSyLUz0eWV6qwqGyqc9aOhOnqXw8qQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
