@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/cache_service.dart';
 
 /// Central Theme Management & Reactive Dark/White Mode Controller
-/// Signature Chorcha Brand Identity: Clean White (#FFFFFF / #F9FAFB) + Emerald Green (#059669) + Tangerine (#F97316) + Crimson (#EF4444)
+/// Signature Prep404 Brand Identity: Clean White (#FFFFFF / #F9FAFB) + Emerald Green (#059669) + Tangerine (#F97316) + Crimson (#EF4444)
 class AppTheme {
   static final TextStyle _notoSansBengali = GoogleFonts.notoSansBengali();
 
@@ -47,7 +47,7 @@ class AppTheme {
     if (savedMode == 'dark') {
       themeModeNotifier.value = ThemeMode.dark;
     } else {
-      // Default to crisp white & emerald theme (Chorcha standard)
+      // Default to crisp white & emerald theme (Prep404 standard)
       themeModeNotifier.value = ThemeMode.light;
     }
   }
@@ -73,7 +73,7 @@ class AppTheme {
         .write('theme_mode', mode == ThemeMode.dark ? 'dark' : 'light');
   }
 
-  /// Crisp Clean White & Emerald Light Theme (Exact Chorcha Design System)
+  /// Crisp Clean White & Emerald Light Theme (Prep404 Design System)
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

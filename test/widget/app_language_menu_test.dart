@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prep404/features/dashboard/presentation/widgets/chorcha_bottom_nav_bar.dart';
+import 'package:prep404/features/dashboard/presentation/widgets/prep_bottom_nav_bar.dart';
 import 'package:prep404/features/dashboard/presentation/screens/learner_support_screen.dart';
 
 void main() {
@@ -17,7 +17,7 @@ void main() {
           GlobalCupertinoLocalizations.delegate,
         ],
         home: Scaffold(
-          bottomNavigationBar: ChorchaBottomNavBar(
+          bottomNavigationBar: PrepBottomNavBar(
             selectedIndex: 0,
             onItemSelected: (_) {},
           ),

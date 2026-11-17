@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The 7 Greek Gamification Tiers discovered from Chorcha, enhanced with rank multipliers.
+/// The 7 Greek Gamification Tiers discovered for admission prep, enhanced with rank multipliers.
 enum LeagueTier {
   alpha(
     name: 'ALPHA',

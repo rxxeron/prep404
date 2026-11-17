@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prep404/features/dashboard/presentation/widgets/chorcha_bottom_nav_bar.dart';
+import 'package:prep404/features/dashboard/presentation/widgets/prep_bottom_nav_bar.dart';
 import 'package:prep404/features/exam/presentation/widgets/exam_bottom_action_bar.dart';
 
 void main() {
@@ -27,7 +27,7 @@ void main() {
                 onFilterChanged: (filter) => selectedFilter = filter,
               ),
             ),
-            bottomNavigationBar: ChorchaBottomNavBar(
+            bottomNavigationBar: PrepBottomNavBar(
               selectedIndex: selectedIndex,
               onItemSelected: (index) => selectedIndex = index,
             ),

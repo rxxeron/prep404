@@ -19,7 +19,7 @@ void main() {
       },
     );
 
-    testWidgets('renders all Chorcha-style profile sections in English',
+    testWidgets('renders all Prep404-style profile sections in English',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 1.0;

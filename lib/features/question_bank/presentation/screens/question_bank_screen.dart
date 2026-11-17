@@ -11,13 +11,13 @@ import '../../../exam/presentation/screens/model_test_catalog_screen.dart';
 import 'university_detail_question_bank_screen.dart';
 import 'subject_chapter_directory_screen.dart';
 
-/// Private University Question Bank & Model Test Directory (Chorcha UI Pattern)
-class ChorchaQuestionBankScreen extends StatefulWidget {
+/// Private University Question Bank & Model Test Directory (Prep404 UI Pattern)
+class QuestionBankScreen extends StatefulWidget {
   final UserProfile? profile;
   final void Function(String filter)? onSelectTrack;
   final bool isEnglish;
 
-  const ChorchaQuestionBankScreen({
+  const QuestionBankScreen({
     super.key,
     this.profile,
     this.onSelectTrack,
@@ -25,11 +25,11 @@ class ChorchaQuestionBankScreen extends StatefulWidget {
   });
 
   @override
-  State<ChorchaQuestionBankScreen> createState() =>
-      _ChorchaQuestionBankScreenState();
+  State<QuestionBankScreen> createState() =>
+      _QuestionBankScreenState();
 }
 
-class _ChorchaQuestionBankScreenState extends State<ChorchaQuestionBankScreen> {
+class _QuestionBankScreenState extends State<QuestionBankScreen> {
   int _selectedFilterPill =
       0; // 0: University-wise, 1: Subject-wise, 2: Model Tests
   String _searchQuery = '';

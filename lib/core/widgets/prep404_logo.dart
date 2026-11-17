@@ -62,4 +62,4 @@ class Prep404Logo extends StatelessWidget {
 }
 
 /// Backwards compatibility alias
-typedef ChorchaLogo = Prep404Logo;
+// Typedef alias removed

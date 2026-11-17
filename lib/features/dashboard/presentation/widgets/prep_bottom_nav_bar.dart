@@ -6,11 +6,11 @@ import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Prep404 5-Tab Navigation Bar
-class ChorchaBottomNavBar extends StatelessWidget {
+class PrepBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
 
-  const ChorchaBottomNavBar({
+  const PrepBottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.onItemSelected,

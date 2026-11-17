@@ -24,7 +24,7 @@ import '../../../onboarding/presentation/screens/onboarding_flow_screen.dart';
 import '../widgets/profile_menu_components.dart';
 import '../widgets/profile_dialogs.dart';
 
-/// Full Chorcha-style User Profile & Account Settings Screen with Editable Admission Setup
+/// Full Prep404-style User Profile & Account Settings Screen with Editable Admission Setup
 class ProfileSettingsScreen extends StatefulWidget {
   final UserProfile profile;
   final ValueChanged<UserProfile>? onProfileUpdated;

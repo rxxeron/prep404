@@ -4,7 +4,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
 import 'live_model_test_screen.dart';
 
-/// Catalog of Live & Scheduled Model Tests with Vibrant 3D Subject Cards (Chorcha-Level Polish)
+/// Catalog of Live & Scheduled Model Tests with Vibrant 3D Subject Cards (Elite-Level Polish)
 class ModelTestCatalogScreen extends StatefulWidget {
   final String candidateName;
   final String candidateCollege;
@@ -105,7 +105,7 @@ class _ModelTestCatalogScreenState extends State<ModelTestCatalogScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Vibrant 3D Track Cards Grid (Inspired by Chorcha's Question Bank Grid)
+                  // 1. Vibrant 3D Track Cards Grid (Inspired by Prep404's Question Bank Grid)
                   Text(
                     'Private University Tracks',
                     style: TextStyle(

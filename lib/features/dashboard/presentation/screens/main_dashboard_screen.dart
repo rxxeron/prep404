@@ -17,14 +17,14 @@ import '../../../onboarding/presentation/screens/onboarding_flow_screen.dart';
 import '../../../battle/presentation/controllers/battle_controller.dart';
 import '../../../battle/presentation/widgets/battle_arena_view.dart';
 import '../../../practice_map/presentation/screens/admission_hiking_roadmap_screen.dart';
-import '../../../question_bank/presentation/screens/chorcha_question_bank_screen.dart';
+import '../../../question_bank/presentation/screens/question_bank_screen.dart';
 import '../../../exam/presentation/screens/daily_exam_arena_screen.dart';
 import '../../../analytics/presentation/screens/exam_history_screen.dart';
 import '../../../analytics/presentation/screens/study_streak_detail_screen.dart';
 import 'notification_center_screen.dart';
 import 'private_uni_dashboard_screen.dart';
 import 'profile_settings_screen.dart';
-import '../widgets/chorcha_bottom_nav_bar.dart';
+import '../widgets/prep_bottom_nav_bar.dart';
 
 /// Main Application Shell & Dynamic Tab Router
 class MainDashboardScreen extends StatefulWidget {
@@ -437,7 +437,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             // Tab 2: Question Bank (University-wise, Topic-wise & Model Tests)
             TickerMode(
               enabled: _currentTabIndex == 2,
-              child: ChorchaQuestionBankScreen(
+              child: QuestionBankScreen(
                 profile: _currentProfile,
                 onSelectTrack: (track) {
                   _switchTab(3);
@@ -470,7 +470,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
       bottomNavigationBar: SafeArea(
         bottom: true,
         minimum: const EdgeInsets.only(bottom: 8),
-        child: ChorchaBottomNavBar(
+        child: PrepBottomNavBar(
           selectedIndex: _currentTabIndex,
           onItemSelected: (idx) {
             HapticFeedback.selectionClick();

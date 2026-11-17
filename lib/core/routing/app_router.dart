@@ -32,7 +32,7 @@ import '../../features/exam/presentation/screens/live_model_test_screen.dart';
 import '../../features/exam/presentation/screens/model_test_catalog_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_flow_screen.dart';
 import '../../features/practice_map/presentation/screens/admission_hiking_roadmap_screen.dart';
-import '../../features/question_bank/presentation/screens/chorcha_question_bank_screen.dart';
+import '../../features/question_bank/presentation/screens/question_bank_screen.dart';
 import '../../features/question_bank/presentation/screens/subject_chapter_directory_screen.dart';
 import '../../features/question_bank/presentation/screens/university_detail_question_bank_screen.dart';
 
@@ -482,7 +482,7 @@ final appRouterProvider =
               if (profile == null) {
                 return RootFlowController(initializeApp: initializeApp);
               }
-              return ChorchaQuestionBankScreen(profile: profile);
+              return QuestionBankScreen(profile: profile);
             },
             routes: [
               GoRoute(
