@@ -1,0 +1,15 @@
+{
+  "name": "prep404",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix react-native run preview",
+    "start": "npm --prefix react-native run preview",
+    "preview": "npm --prefix react-native run preview",
+    "build": "npm --prefix react-native run build:web",
+    "lint": "npm --prefix react-native run lint",
+    "postinstall": "npm --prefix react-native install"
+  },
+  "dependencies": {
+    "recharts": "^3.11.0"
+  }
+}

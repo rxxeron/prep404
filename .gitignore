@@ -106,3 +106,4 @@ service-account*.json
 *.pem
 *.key
 
+.playwright-cli/

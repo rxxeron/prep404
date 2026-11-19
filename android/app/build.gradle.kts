@@ -28,6 +28,9 @@ android {
     defaultConfig {
         applicationId = "com.rxxxeron.prep404"
         manifestPlaceholders["authRedirectScheme"] = "com.rxxxeron.prep404"
+        manifestPlaceholders["authRedirectHost"] = "login-callback"
+        manifestPlaceholders["googleAndroidClientId"] =
+            "560610133772-03ij6u6cqo2pk1t2tbjvmpqrl79md609.apps.googleusercontent.com"
         manifestPlaceholders["allowBackup"] = "true"
         // Plain-HTTP traffic is allowed only in debug builds (local API on 10.0.2.2).
         manifestPlaceholders["usesCleartextTraffic"] = "false"

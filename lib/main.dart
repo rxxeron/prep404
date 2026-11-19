@@ -74,8 +74,10 @@ class _Prep404AppBody extends ConsumerWidget {
       locale: AppStrings(appLanguage).locale,
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
+        // ignore: deprecated_member_use
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
+        // ignore: deprecated_member_use
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,

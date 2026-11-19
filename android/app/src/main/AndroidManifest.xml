@@ -31,9 +31,12 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${authRedirectScheme}" android:host="login-callback" />
+                <data android:scheme="${authRedirectScheme}" android:host="${authRedirectHost}" />
             </intent-filter>
         </activity>
+        <meta-data
+            android:name="com.prep404.GOOGLE_ANDROID_CLIENT_ID"
+            android:value="${googleAndroidClientId}" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

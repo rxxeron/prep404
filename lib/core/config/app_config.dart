@@ -6,12 +6,24 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   AppConfig._();
 
+  static const Map<String, String> _compileTimeDefines = {
+    'WEB_BASE_URL': String.fromEnvironment('WEB_BASE_URL'),
+    'SUPABASE_URL': String.fromEnvironment('SUPABASE_URL'),
+    'SUPABASE_ANON_KEY': String.fromEnvironment('SUPABASE_ANON_KEY'),
+    'AUTH_REDIRECT_URI': String.fromEnvironment('AUTH_REDIRECT_URI'),
+    'GOOGLE_CLIENT_ID': String.fromEnvironment('GOOGLE_CLIENT_ID'),
+    'GOOGLE_WEB_CLIENT_ID': String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+    'API_HOST': String.fromEnvironment('API_HOST'),
+    'API_BASE_URL': String.fromEnvironment('API_BASE_URL'),
+    'WS_BATTLE_URL': String.fromEnvironment('WS_BATTLE_URL'),
+  };
+
   static String _get(String key, {String defaultValue = ''}) {
     if (dotenv.isInitialized) {
       final value = dotenv.env[key];
       if (value != null && value.isNotEmpty) return value;
     }
-    final fromEnv = String.fromEnvironment(key);
+    final fromEnv = _compileTimeDefines[key] ?? '';
     if (fromEnv.isNotEmpty) return fromEnv;
     return defaultValue;
   }

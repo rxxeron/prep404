@@ -1,42 +1,47 @@
-# Prep404 Mobile & Web Application
+# Prep404 • Failure Not Found
 
-The official cross-platform learner application for **Prep404 • Failure Not Found** (Bangladeshi University Admission Preparation).
+Bangladeshi private university admission preparation platform available in two native/cross-platform TypeScript & Dart stacks:
+1. **Flutter (Dart)** at the repository root (`/lib`, `/android`, `/web`, `/test`, `/pubspec.yaml`)
+2. **React Native + TypeScript** in `/react-native/` (`/react-native/App.tsx`, `/react-native/src/`, `/react-native/package.json`)
 
-## Features
-- **Software OMR Sheet & Timed Exams**: Exact real-world physical exam simulation with authentic 4-bubble OMR sheets, negative marking (-0.25), and live timer pills.
-- **Dynamic Question Banking & Explanations**: Rich mathematical expressions rendered with KaTeX, categorized by university tracks (BRACU, NSU, IBA, BUP, etc.).
-- **1v1 Real-Time Duel Arena**: Live head-to-head multiplayer battles powered by WebSocket and Redis Pub/Sub.
-- **Syllabus Roadmap & Hiking Trails**: Step-by-step topic mastery with progress tracking and summit gates.
-- **Athena Analytics & Mistake Vault**: Individual deficit impact calculation and automated weak topic re-tests.
-- **Bilingual Experience**: Instant switching between Bengali and English.
+## Core Features
 
-## Tech Stack
-- **Framework**: Flutter 3 (Dart 3)
-- **Platforms**: Android, Web, iOS
-- **State Management**: Riverpod (StateNotifier / AsyncNotifier)
-- **Networking**: Dio / HTTP, WebSocket (`web_socket_channel`)
-- **Backend/Auth**: Supabase Auth, Firebase Cloud Messaging (FCM)
+- **Authentication & Bilingual Onboarding (`EN` / `বাং`)**:
+  - Phone + OTP verification, Guest Preview entry, and 3-step onboarding supporting **Bangla Medium (NCTB Bangla/English Version)** and **English Medium (Cambridge CAIE / Pearson Edexcel)**, cascading Division → District selectors, searchable SSC/HSC/O-Level/A-Level institutions, and multi-university/discipline selection.
+- **8 Bangladeshi Private University Tracks & Blueprints**:
+  - `NSU`, `BRACU`, `AUST`, `AIUB`, `EWU`, `IUB`, `UIU`, and `UAP` with program-specific section weightages, negative-marking policies, admission cycles, and countdown timers.
+- **Hiking Admission Roadmap**:
+  - S-curve milestone trail (`10 | 15 | 30 | 60` day horizons) across 4 pillars (`Topic-wise`, `Subject-wise`, `Section-wise`, `Overall`) with XP & completion tracking.
+- **Question Bank & FSRS-4.5 Adaptive Practice**:
+  - Math & science MCQs (`Higher Math`, `Quant Math`, `Physics`, `Chemistry`, `Biology`, `English`), reading comprehension passages, bookmarks, authored Socratic study hints, question reporting, and FSRS-4.5 spaced-repetition scheduling.
+- **Live Model Tests & Software OMR Bubble Sheet Simulator**:
+  - Choose **In-App Digital Exam** or **Software OMR Bubble Sheet** (+15m transfer buffer, interactive `(A)(B)(C)(D)` bubbles with question booklet inspector), live timer, navigator grid, negative-marking scorer, confetti Score Card, and reviewed solutions.
+- **Daily Ranked Exam Arena & 1v1 Quiz Battle Arena**:
+  - 10 AM – 10 PM daily slot countdown with national & university-track leaderboards, plus timed 15s/round 1v1 duels with room codes and zero-spoiler locking.
+- **Analytics, Mistake Vault & Study Streaks**:
+  - Analytical accuracy breakdown, reviewed exam scripts, deficit-ranked Mistake Vault with 1-click Adaptive Re-Tests, and Study Streak Milestone Ladder.
 
-## Getting Started
+## Running & Verifying
 
-### 1. Prerequisites
-- Flutter SDK 3.24+
-- Dart SDK 3.5+
-- Android Studio / VS Code with Flutter extension
+### 1. Flutter App (Repository Root `/`)
 
-### 2. Setup
+Ensure `.env` exists (copy from `.env.example` and configure optional backend keys):
+
 ```bash
 flutter pub get
+flutter analyze
+flutter test
+flutter run -d web-server --web-port 3000
 ```
 
-### 3. Environment
-Ensure `.env` exists in this folder (copy from `.env.example`).
+### 2. React Native + TypeScript App (`/react-native/`)
 
-### 4. Run Application
 ```bash
-# Run on connected Android device/emulator
-flutter run
-
-# Run on Web (Chrome)
-flutter run -d chrome
+cd react-native
+npm install
+npm run lint      # TypeScript check (tsc --noEmit)
+npm run web       # Run React Native in browser preview on http://0.0.0.0:3000
+npm start         # Start React Native Metro bundler for native builds
+npm run android   # Run on Android
+npm run ios       # Run on iOS
 ```
