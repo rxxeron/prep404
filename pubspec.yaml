@@ -35,6 +35,18 @@ dependencies:
   flutter_dotenv: ^6.0.1
   firebase_core: ^5.1.0
   firebase_messaging: ^17.0.1
+  rive: ^0.14.11
+  lottie: ^3.8.2
+  flutter_animate: ^4.5.2
+  flutter_staggered_animations: ^1.1.1
+  shimmer: ^4.0.0
+  animations: ^3.0.0
+  sensors_plus: ^7.1.1
+
+  # Printable OMR Practice Packs (PDF + QR Code Scanner)
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  mobile_scanner: ^6.0.2
 
 dev_dependencies:
   flutter_test:
@@ -51,3 +63,7 @@ flutter:
     - .env
     - assets/images/
     - assets/images/brand/
+    - assets/animations/
+  shaders:
+    - shaders/aurora_mesh.frag
+    - shaders/liquid_fluid.frag

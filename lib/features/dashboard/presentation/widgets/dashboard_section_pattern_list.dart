@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/university_roadmap_service.dart';
+import '../../../../core/widgets/prep_staggered_list.dart';
 
 class DashboardSectionPatternList extends StatelessWidget {
   final UniversityRoadmapData currentUni;
@@ -66,7 +67,10 @@ class DashboardSectionPatternList extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, idx) {
             final sec = currentUni.sections[idx];
-            return Container(
+            return PrepStaggeredItem(
+              index: idx,
+              slideOffset: 14,
+              child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: colors.surface,
@@ -151,6 +155,7 @@ class DashboardSectionPatternList extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
             );
           },
         ),

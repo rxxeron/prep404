@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
-import '../../../../core/config/app_config.dart';
+import '../../../../core/animations/prep_lottie.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'katex_question_view.dart';
@@ -21,6 +21,7 @@ class ExamScoreCard extends StatefulWidget {
   final Map<String, String> userAnswers;
   final VoidCallback onExit;
   final bool isPractice;
+  final double negativeMark;
 
   const ExamScoreCard({
     super.key,
@@ -37,6 +38,7 @@ class ExamScoreCard extends StatefulWidget {
     required this.userAnswers,
     required this.onExit,
     this.isPractice = false,
+    this.negativeMark = 0.0,
   });
 
   @override
@@ -117,21 +119,14 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final cleanSlug = widget.slug.contains('_daily_slot')
-        ? 'daily-${widget.slug.replaceAll('_daily_slot', '').replaceAll('_daily', '')}-live'
-        : widget.slug;
-    final shareUrl = '${AppConfig.webBaseUrl}/m/$cleanSlug';
     final shareText = widget.isPractice
-        ? 'I practiced "${widget.title}" on Prep404 and scored ${widget.score.toStringAsFixed(2)}/${widget.totalQuestions}! Challenge yourself here: $shareUrl'
-        : 'I scored ${widget.score.toStringAsFixed(2)}/${widget.totalQuestions} (Rank #${widget.nationalRank} of ${widget.totalCandidates}) on today\'s ${widget.title}! Can you beat me? $shareUrl';
+        ? 'I practiced "${widget.title}" on Prep404 and scored ${widget.score.toStringAsFixed(2)}/${widget.totalQuestions} (${widget.correctCount} correct, ${widget.wrongCount} wrong).'
+        : 'I scored ${widget.score.toStringAsFixed(2)}/${widget.totalQuestions} (Rank #${widget.nationalRank} of ${widget.totalCandidates}) on "${widget.title}" on Prep404!';
 
     final answeredTotal = widget.correctCount + widget.wrongCount;
     final accuracy = answeredTotal == 0
         ? 0
         : ((widget.correctCount / answeredTotal) * 100).toInt();
-    final scorePercentage = widget.totalQuestions == 0
-        ? 0
-        : ((widget.score / widget.totalQuestions) * 100).toInt();
 
     final subjectBreakdown = _computeSubjectBreakdown();
 
@@ -185,6 +180,8 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                   ),
                   child: Column(
                     children: [
+                      PrepLottie.success(size: 64, loop: false),
+                      const SizedBox(height: 6),
                       Text(
                         widget.isPractice
                             ? '🎯 UNRANKED PRACTICE MODE'
@@ -278,7 +275,7 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                 ),
                 const SizedBox(height: 20),
 
-                // 2. Admission Benchmark Evaluation
+                // 2. Attempt Pacing & Accuracy Summary (100% real telemetry, zero hardcoded cut-offs)
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -296,7 +293,7 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                               color: colors.primary, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'University Cut-Off Benchmark',
+                            'Attempt Summary',
                             style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -305,14 +302,33 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      _buildBenchmarkRow('BRAC University (CSE/EEE)', 68,
-                          scorePercentage, colors),
+                      _buildRealMetricRow(
+                        'Questions Attempted',
+                        '$answeredTotal / ${widget.totalQuestions}',
+                        colors,
+                      ),
                       const SizedBox(height: 10),
-                      _buildBenchmarkRow('North South University (SEPS)', 65,
-                          scorePercentage, colors),
+                      _buildRealMetricRow(
+                        'Unanswered / Skipped',
+                        '${widget.totalQuestions - answeredTotal}',
+                        colors,
+                      ),
                       const SizedBox(height: 10),
-                      _buildBenchmarkRow('Independent University (SETS)', 60,
-                          scorePercentage, colors),
+                      _buildRealMetricRow(
+                        'Average Pace',
+                        answeredTotal > 0
+                            ? '${(widget.timeTakenSeconds / answeredTotal).round()}s per question'
+                            : '—',
+                        colors,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildRealMetricRow(
+                        'Negative Marking',
+                        widget.negativeMark == 0
+                            ? 'None (0.00)'
+                            : '-${widget.negativeMark.toStringAsFixed(2)} per wrong answer',
+                        colors,
+                      ),
                     ],
                   ),
                 ),
@@ -346,8 +362,9 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                       ),
                       const SizedBox(height: 14),
                       ...subjectBreakdown.values.map((stat) {
-                        final subScore =
-                            (stat.correct * 1.0) - (stat.wrong * 0.25);
+                        final rawSub = (stat.correct * 1.0) -
+                            (stat.wrong * widget.negativeMark);
+                        final subScore = rawSub < 0 ? 0.0 : rawSub;
                         final subAccuracy = stat.correct + stat.wrong == 0
                             ? 0
                             : ((stat.correct / (stat.correct + stat.wrong)) *
@@ -421,7 +438,7 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                               color: colors.accentEmerald, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            'Challenge Friends with this Test',
+                            'Share Your Score Summary',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: colors.textPrimary,
@@ -431,11 +448,11 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        shareUrl,
+                        shareText,
                         style: TextStyle(
-                            color: colors.accentEmerald,
-                            fontFamily: 'monospace',
-                            fontSize: 12),
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                            height: 1.4),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -446,11 +463,11 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text(
-                                      'Result and model test link copied to clipboard!')),
+                                      'Score summary copied to clipboard!')),
                             );
                           },
                           icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('Copy Score & Challenge Link'),
+                          label: const Text('Copy Score Summary'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colors.accentEmerald,
                             foregroundColor: Colors.white,
@@ -516,31 +533,29 @@ class _ExamScoreCardState extends State<ExamScoreCard> {
     );
   }
 
-  Widget _buildBenchmarkRow(
-      String uniName, int cutOffPercent, int userPercent, AppColors colors) {
-    final passed = userPercent >= cutOffPercent;
+  Widget _buildRealMetricRow(String label, String value, AppColors colors) {
     return Row(
       children: [
         Icon(
-          passed ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: passed ? colors.accentEmerald : colors.textMuted,
+          Icons.check_circle_outline_rounded,
+          color: colors.primary,
           size: 16,
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            uniName,
+            label,
             style: TextStyle(
                 color: colors.textSecondary,
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w500),
           ),
         ),
         Text(
-          'Cut-off: $cutOffPercent% • You: $userPercent%',
+          value,
           style: TextStyle(
-            color: passed ? colors.accentEmerald : colors.textSecondary,
-            fontSize: 12,
+            color: colors.textPrimary,
+            fontSize: 12.5,
             fontWeight: FontWeight.bold,
           ),
         ),

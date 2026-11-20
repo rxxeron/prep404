@@ -5,18 +5,18 @@ import '../../../../core/models/question.dart';
 import '../../../../core/repositories/exam_repository.dart';
 import '../../../../core/services/admission_plan_service.dart';
 import '../../../../core/services/cache_service.dart';
+import '../../../../core/services/offline_storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/animations/prep_lottie.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
 import '../widgets/katex_question_view.dart';
 import '../widgets/exam_timer_pill.dart';
 import '../widgets/exam_score_card.dart';
-import '../widgets/software_omr_sheet_view.dart';
-import '../widgets/exam_mode_selection_view.dart';
 import '../widgets/exam_dialogs.dart';
 import '../widgets/exam_bottom_action_bar.dart';
 
-/// Premier Dual-Mode (In-App vs OMR) Continuous Scroll Exam Runner
+/// Continuous Scroll Digital Exam Runner
 class LiveModelTestScreen extends StatefulWidget {
   final String slug;
   final String? title;
@@ -61,9 +61,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
   late double _negativeMark;
   List<Question> _questions = [];
 
-  ExamRunnerMode? _runnerMode;
   ExamFilterType _filterType = ExamFilterType.all;
-  bool _showOmrSheet = false;
   late bool _isPractice;
 
   final Map<String, String> _userAnswers = {}; // questionId -> optionId
@@ -86,7 +84,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
     _isPractice = widget.isPracticeMode;
     _examTitle = widget.title ?? 'Daily Model Test';
     _durationMinutes = widget.durationMinutes ?? 30;
-    _negativeMark = widget.negativeMark ?? 0.25;
+    _negativeMark = widget.negativeMark ?? 0.0;
 
     if (SupabaseService().currentUser != null && !widget.isPracticeMode) {
       _loadDynamicExam();
@@ -97,6 +95,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
           .toList();
       _remainingSeconds.value = _durationMinutes * 60;
       _isLoading = false;
+      _startTimer();
     } else {
       _loadDynamicExam();
     }
@@ -129,6 +128,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
           _remainingSeconds.value = _durationMinutes * 60;
           _isLoading = false;
         });
+        _startTimer();
       } else if (mounted) {
         setState(() {
           _errorMessage = 'Failed to load examination questions.';
@@ -145,19 +145,6 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
         });
       }
     }
-  }
-
-  void _selectRunnerMode(ExamRunnerMode mode) {
-    setState(() {
-      _runnerMode = mode;
-      // In OMR simulation mode, grant extra 15 minutes buffer
-      if (mode == ExamRunnerMode.omrBubble) {
-        _durationMinutes += 15;
-        _remainingSeconds.value = _durationMinutes * 60;
-        _showOmrSheet = true;
-      }
-    });
-    _startTimer();
   }
 
   void _startTimer() {
@@ -412,17 +399,33 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
           _isSubmitting = false;
         });
       }
-    } catch (_) {
-      if (_examSessionId != null || SupabaseService().currentUser != null) {
+    } catch (e) {
+      // Only block local fallback when an active live-ranked server session exists
+      // (non-practice) so we don't double-submit a ranked attempt.
+      if (_examSessionId != null && !widget.isPracticeMode) {
+        final msg = e.toString().replaceFirst('Bad state: ', '').trim();
         if (mounted) {
           setState(() {
-            _submissionError =
-                'Submission was not confirmed. Retry to safely check the same exam attempt.';
+            _submissionError = msg.isNotEmpty && msg.length < 140
+                ? msg
+                : 'Submission was not confirmed. Retry to safely check the same exam attempt.';
             _isSubmitting = false;
           });
         }
         return;
       }
+
+      // Queue for background sync via OfflineStorageService when backend is unreachable
+      OfflineStorageService().enqueuePendingSubmission({
+        'idempotencyKey': _submissionIdempotencyKey,
+        'slug': widget.slug,
+        'title': _examTitle,
+        'userId': SupabaseService().currentUser?.id ?? widget.userId,
+        'answers': _userAnswers,
+        'timeTakenSeconds': _timeTakenSeconds,
+        'isPractice': true,
+        'queuedAt': DateTime.now().toIso8601String(),
+      });
 
       // Fallback local scoring
       List<Question> readyQuestions = _questions;
@@ -563,18 +566,6 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
       );
     }
 
-    // Step 1: Pre-Exam Mode Selection View (Digital vs OMR Bubble)
-    if (_runnerMode == null) {
-      return ExamModeSelectionView(
-        examTitle: _examTitle,
-        questionCount: _questions.length,
-        negativeMark: _negativeMark,
-        durationMinutes: _durationMinutes,
-        onExit: widget.onExit,
-        onSelectMode: _selectRunnerMode,
-      );
-    }
-
     if (_isSubmitting) {
       return Scaffold(
         backgroundColor: colors.background,
@@ -582,8 +573,8 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: colors.accentEmerald),
-              const SizedBox(height: 20),
+              PrepLottie.loading(size: 96),
+              const SizedBox(height: 16),
               Text(
                 'Calculating score and rank...',
                 style: TextStyle(
@@ -611,6 +602,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
         questions: _questions,
         userAnswers: _userAnswers,
         isPractice: _isPractice,
+        negativeMark: _negativeMark,
         onExit: widget.onExit,
       );
     }
@@ -624,13 +616,22 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
                 .where((q) => !_userAnswers.containsKey(q.id))
                 .toList());
 
-    final isOmr = _runnerMode == ExamRunnerMode.omrBubble;
-
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.surface,
         elevation: 0.5,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colors.textPrimary),
+          tooltip: 'Exit exam',
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => ExamQuitConfirmDialog(onQuit: widget.onExit),
+            );
+          },
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -643,57 +644,30 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
             ),
             Text(
               widget.isPracticeMode
-                  ? '🎯 Practice Mode • Unranked'
-                  : (isOmr
-                      ? 'OMR Simulation Mode • +15m Buffer'
-                      : 'In-App Digital Mode'),
+                  ? 'Practice Mode • Unranked'
+                  : 'Live Exam',
               style: TextStyle(
                 fontSize: 12,
                 color: widget.isPracticeMode
                     ? colors.accentAmber
-                    : (isOmr ? colors.accentAmber : colors.primary),
+                    : colors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
         actions: [
-          // Mode / View Switcher (Question Scroll <-> Software OMR Bubble Sheet)
-          IconButton(
-            icon: Icon(
-              _showOmrSheet
-                  ? Icons.format_list_bulleted_rounded
-                  : Icons.radio_button_checked_rounded,
-              color: _showOmrSheet ? colors.primary : colors.accentAmber,
-            ),
-            tooltip: _showOmrSheet
-                ? 'Switch to Question List'
-                : 'Switch to OMR Sheet',
-            onPressed: () => setState(() => _showOmrSheet = !_showOmrSheet),
-          ),
           ValueListenableBuilder<int>(
             valueListenable: _remainingSeconds,
             builder: (context, remainingSeconds, child) =>
                 ExamTimerPill(remainingSeconds: remainingSeconds),
           ),
-          // Central Theme Toggle Pill
-          const ThemeToggleIconButton(),
-          if (!_showOmrSheet)
-            IconButton(
-              icon: Icon(Icons.grid_view_rounded, color: colors.primary),
-              onPressed: _openQuestionPalette,
-              tooltip: 'Question Navigator Grid',
-            ),
           IconButton(
-            icon: Icon(Icons.close, color: colors.textSecondary),
-            tooltip: 'Exit exam',
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => ExamQuitConfirmDialog(onQuit: widget.onExit),
-              );
-            },
+            icon: Icon(Icons.grid_view_rounded, color: colors.primary),
+            onPressed: _openQuestionPalette,
+            tooltip: 'Question Navigator Grid',
           ),
+          const SizedBox(width: 4),
         ],
         bottom: _submissionError == null
             ? null
@@ -727,30 +701,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
                 ),
               ),
       ),
-      body: _showOmrSheet
-          ? SoftwareOmrSheetView(
-              title: _examTitle,
-              candidateName: widget.candidateName,
-              candidateCollege: widget.candidateCollege,
-              questions: _questions,
-              userAnswers: _userAnswers,
-              onOptionSelected: _selectOption,
-              onSubmit: _confirmSubmit,
-              onQuestionTap: (index) {
-                setState(() {
-                  _showOmrSheet = false;
-                  _filterType = ExamFilterType.all;
-                });
-                if (_scrollController.hasClients) {
-                  _scrollController.animateTo(
-                    index * 320.0,
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-            )
-          : Column(
+      body: Column(
               children: [
                 // Filter Chips Row (All, Answered, Unanswered)
                 ExamFilterBar(
@@ -787,7 +738,7 @@ class _LiveModelTestScreenState extends State<LiveModelTestScreen> {
                             return KaTeXQuestionView(
                               question: q,
                               questionNumber: realQuestionNumber,
-                              isOmrMode: isOmr,
+                              isOmrMode: false,
                               selectedOptionId: _userAnswers[q.id],
                               onOptionSelected: (optId) =>
                                   _selectOption(q.id, optId),

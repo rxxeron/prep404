@@ -5,6 +5,7 @@ import '../../../../core/repositories/exam_repository.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/animations/prep_lottie.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
 import '../../../../core/widgets/prep_state_views.dart';
@@ -391,6 +392,7 @@ class _ExamHistoryScreenState extends State<ExamHistoryScreen>
     if (_historyList.isEmpty) {
       return PrepEmptyStateView(
         icon: Icons.analytics_outlined,
+        customGraphic: PrepLottie.emptyState(size: 96),
         title: 'No Analytics Yet',
         subtitle:
             'Complete your first live or practice model test to unlock comprehensive performance breakdowns and varsity readiness analytics.',

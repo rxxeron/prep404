@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/animations/prep_rive.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/models/university_target.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -32,21 +33,43 @@ class MediumSelectorStep extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                  Text(
-                    strings.chooseMediumTitle,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: colors.textPrimary,
-                      letterSpacing: -0.3,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              strings.chooseMediumTitle,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: colors.textPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              strings.chooseMediumSubtitle,
+                              style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: colors.textSecondary,
+                                  height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const PrepRive(
+                        assetPath: 'assets/animations/prep404_mascot.riv',
+                        stateMachineName: 'CurriculumState',
+                        width: 64,
+                        height: 64,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    strings.chooseMediumSubtitle,
-                    style: TextStyle(fontSize: 14, color: colors.textSecondary, height: 1.4),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
                   // Bangla Medium Card (NCTB)
                   _buildMediumCard(

@@ -10,7 +10,6 @@ import 'notification_settings_screen.dart';
 import 'about_us_screen.dart';
 import 'reported_questions_screen.dart';
 import 'subscription_screen.dart';
-import 'upgrade_screen.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/models/university_target.dart';
 import '../../../../core/models/user_profile.dart';
@@ -457,28 +456,30 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           children: [
-            // Avatar Circle
-            CircleAvatar(
-              radius: 44,
-              backgroundColor: colors.deepPlum,
-              child: ClipOval(
-                child: Image.asset(
-                  context.isDark
-                      ? 'assets/images/brand/Prep404_Profile_Dark.png'
-                      : 'assets/images/brand/Prep404_Profile_Light.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Center(
-                    child: Text(
-                      initialLetter,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 38,
-                        fontWeight: FontWeight.bold,
-                      ),
+            // Avatar Circle (User Monogram Initials)
+            Builder(
+              builder: (_) {
+                final initials = _currentProfile.name
+                    .trim()
+                    .split(RegExp(r'\s+'))
+                    .where((w) => w.isNotEmpty)
+                    .take(2)
+                    .map((w) => w[0].toUpperCase())
+                    .join();
+                return CircleAvatar(
+                  radius: 44,
+                  backgroundColor: colors.deepPlum,
+                  child: Text(
+                    initials.isNotEmpty ? initials : initialLetter,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.0,
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 12),
 
@@ -507,7 +508,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: colors.deepPlum,
+                    color: context.isDark ? colors.primary : colors.deepPlum,
                   ),
                 ),
               ),
@@ -528,47 +529,38 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color:
-                                  colors.accentEmerald.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(Icons.school_rounded,
-                                color: colors.accentEmerald, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Admission Profile & Setup',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.accentEmerald,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          onPressed: () => _openEditFlow(step: 0),
-                          icon: const Icon(Icons.edit_note_rounded, size: 18),
-                          label: const Text('Edit All'),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colors.accentEmerald.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        child: Icon(Icons.school_rounded,
+                            color: colors.accentEmerald, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Admission Profile & Setup',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.accentEmerald,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => _openEditFlow(step: 0),
+                        icon: const Icon(Icons.edit_note_rounded, size: 18),
+                        label: const Text('Edit All'),
                       ),
                     ],
                   ),
@@ -661,7 +653,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              color: colors.deepPlum,
+                              color: context.isDark
+                                  ? colors.textPrimary
+                                  : colors.deepPlum,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -690,91 +684,165 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             const SizedBox(height: 12),
 
             // Link Account Card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colors.borderSubtle),
-                boxShadow: colors.cardShadow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Linked Accounts',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: colors.textPrimary,
-                    ),
+            Builder(
+              builder: (_) {
+                final service = SupabaseService();
+                final identities = service.isInitialized
+                    ? (service.client.auth.currentUser?.identities ?? [])
+                    : const [];
+                final linkedProviders =
+                    identities.map((i) => i.provider.toLowerCase()).toSet();
+                final isGoogleLinked = linkedProviders.contains('google');
+                final isFbLinked = linkedProviders.contains('facebook');
+                final isApplePlatform =
+                    Theme.of(context).platform == TargetPlatform.iOS ||
+                        Theme.of(context).platform == TargetPlatform.macOS;
+
+                return Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: colors.borderSubtle),
+                    boxShadow: colors.cardShadow,
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSocialPill(
-                        semanticLabel: 'Link Facebook account',
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'f',
-                              style: TextStyle(
-                                color: Color(0xFF1877F2),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            SizedBox(width: 3),
-                            Icon(Icons.add, size: 14, color: Color(0xFF6B7280)),
-                          ],
+                      Text(
+                        'Linked Accounts',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
                         ),
-                        onTap: () => _linkSocialAccount(
-                            OAuthProvider.facebook, 'Facebook'),
                       ),
-                      _buildSocialPill(
-                        semanticLabel: 'Link Google account',
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'G',
-                              style: TextStyle(
-                                color: Color(0xFFEA4335),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                              ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _buildSocialPill(
+                            semanticLabel: isGoogleLinked
+                                ? 'Google account connected'
+                                : 'Link Google account',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Color(0xFFEA4335),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isGoogleLinked ? 'Google · Linked' : 'Google',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  isGoogleLinked
+                                      ? Icons.check_circle_rounded
+                                      : Icons.add,
+                                  size: 14,
+                                  color: isGoogleLinked
+                                      ? colors.accentEmerald
+                                      : colors.textMuted,
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.add, size: 14, color: Color(0xFF6B7280)),
-                          ],
-                        ),
-                        onTap: () =>
-                            _linkSocialAccount(OAuthProvider.google, 'Google'),
-                      ),
-                      _buildSocialPill(
-                        semanticLabel: 'Link Apple account',
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.apple,
-                                size: 16, color: Color(0xFF1F2937)),
-                            SizedBox(width: 2),
-                            Icon(Icons.add, size: 14, color: Color(0xFF6B7280)),
-                          ],
-                        ),
-                        onTap: () =>
-                            _linkSocialAccount(OAuthProvider.apple, 'Apple'),
+                            onTap: isGoogleLinked
+                                ? () => _showOptionDetails(
+                                      'Google Account',
+                                      colors,
+                                      'Your Google account is already linked and active.',
+                                    )
+                                : () => _linkSocialAccount(
+                                    OAuthProvider.google, 'Google'),
+                          ),
+                          _buildSocialPill(
+                            semanticLabel: isFbLinked
+                                ? 'Facebook account connected'
+                                : 'Link Facebook account',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'f',
+                                  style: TextStyle(
+                                    color: Color(0xFF1877F2),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isFbLinked ? 'Facebook · Linked' : 'Facebook',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  isFbLinked
+                                      ? Icons.check_circle_rounded
+                                      : Icons.add,
+                                  size: 14,
+                                  color: isFbLinked
+                                      ? colors.accentEmerald
+                                      : colors.textMuted,
+                                ),
+                              ],
+                            ),
+                            onTap: () => _linkSocialAccount(
+                                OAuthProvider.facebook, 'Facebook'),
+                          ),
+                          if (isApplePlatform)
+                            _buildSocialPill(
+                              semanticLabel: 'Link Apple account',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.apple,
+                                      size: 16, color: colors.textPrimary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Apple',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.add,
+                                      size: 14, color: colors.textMuted),
+                                ],
+                              ),
+                              onTap: () => _linkSocialAccount(
+                                  OAuthProvider.apple, 'Apple'),
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 12),
 
-            // Group 2: Upgrade & Subscription
+            // Group 2: Plan & Subscription
             _buildGroupCard(
               colors: colors,
               children: [
@@ -783,32 +851,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   iconContainerColor: const Color(0xFFFEF3C7),
                   iconColor: const Color(0xFFD97706),
                   icon: Icons.workspace_premium_rounded,
-                  title: 'Upgrade',
-                  onTap: () {
-                    if (GoRouter.maybeOf(context) != null) {
-                      context.push(AppRoutes.upgrade);
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const UpgradeScreen()),
-                      );
-                    }
-                  },
-                ),
-                _buildDivider(colors),
-                _buildMenuItem(
-                  colors: colors,
-                  iconContainerColor: const Color(0xFFFFF3E6),
-                  iconColor: const Color(0xFFFF7A36),
-                  icon: Icons.credit_card_rounded,
-                  title: 'Subscription',
+                  title: 'Plan & Subscription',
                   onTap: () {
                     if (GoRouter.maybeOf(context) != null) {
                       context.push(AppRoutes.subscription);
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const SubscriptionScreen()),
                       );
                     }
                   },

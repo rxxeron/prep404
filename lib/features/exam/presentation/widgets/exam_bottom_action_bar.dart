@@ -27,35 +27,41 @@ class ExamFilterBar extends StatelessWidget {
     final unAnsweredCount = totalCount - answeredCount;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border(bottom: BorderSide(color: colors.border)),
       ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
+      child: Row(
         children: [
-          _buildChip(
-            colors: colors,
-            label: 'All ($totalCount)',
-            isSelected: currentFilter == ExamFilterType.all,
-            activeColor: colors.primary,
-            onTap: () => onFilterChanged(ExamFilterType.all),
+          Expanded(
+            child: _buildChip(
+              colors: colors,
+              label: 'All ($totalCount)',
+              isSelected: currentFilter == ExamFilterType.all,
+              activeColor: colors.primary,
+              onTap: () => onFilterChanged(ExamFilterType.all),
+            ),
           ),
-          _buildChip(
-            colors: colors,
-            label: 'Answered ($answeredCount)',
-            isSelected: currentFilter == ExamFilterType.answered,
-            activeColor: colors.accentEmerald,
-            onTap: () => onFilterChanged(ExamFilterType.answered),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildChip(
+              colors: colors,
+              label: 'Answered ($answeredCount)',
+              isSelected: currentFilter == ExamFilterType.answered,
+              activeColor: colors.accentEmerald,
+              onTap: () => onFilterChanged(ExamFilterType.answered),
+            ),
           ),
-          _buildChip(
-            colors: colors,
-            label: 'Unanswered ($unAnsweredCount)',
-            isSelected: currentFilter == ExamFilterType.unanswered,
-            activeColor: colors.dangerRed,
-            onTap: () => onFilterChanged(ExamFilterType.unanswered),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildChip(
+              colors: colors,
+              label: 'Left ($unAnsweredCount)',
+              isSelected: currentFilter == ExamFilterType.unanswered,
+              activeColor: colors.dangerRed,
+              onTap: () => onFilterChanged(ExamFilterType.unanswered),
+            ),
           ),
         ],
       ),
@@ -78,14 +84,14 @@ class ExamFilterBar extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 36),
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: isSelected ? activeColor : colors.surfaceElevated,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isSelected ? activeColor : colors.border,
               ),

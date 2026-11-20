@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/repositories/institution_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_sorter.dart';
 
 /// Searchable Dropdown Modal for selecting Schools, Colleges and Madrasahs
 class SearchableInstitutionDropdown extends StatefulWidget {
@@ -189,8 +190,9 @@ class _InstitutionSearchSheetState extends State<_InstitutionSearchSheet> {
           limit: 250,
         );
         if (mounted && _searchCtrl.text.trim().isEmpty) {
+          final mapped = list.map((e) => e.toInstitutionModel()).toList();
           setState(() {
-            _results = list.map((e) => e.toInstitutionModel()).toList();
+            _results = AppSorter.sortBy<InstitutionModel>(mapped, (i) => i.nameEn);
             _isLoading = false;
           });
         }
@@ -198,7 +200,7 @@ class _InstitutionSearchSheetState extends State<_InstitutionSearchSheet> {
         final list = await _repo.searchInstitutions('', isHsc: widget.isHsc, limit: 100);
         if (mounted && _searchCtrl.text.trim().isEmpty) {
           setState(() {
-            _results = list;
+            _results = AppSorter.sortBy<InstitutionModel>(list, (i) => i.nameEn);
             _isLoading = false;
           });
         }
@@ -242,8 +244,9 @@ class _InstitutionSearchSheetState extends State<_InstitutionSearchSheet> {
           limit: 100,
         );
         if (mounted) {
+          final mapped = res.map((e) => e.toInstitutionModel()).toList();
           setState(() {
-            _results = res.map((e) => e.toInstitutionModel()).toList();
+            _results = AppSorter.sortBy<InstitutionModel>(mapped, (i) => i.nameEn);
             _isLoading = false;
           });
         }
@@ -251,7 +254,7 @@ class _InstitutionSearchSheetState extends State<_InstitutionSearchSheet> {
         final res = await _repo.searchInstitutions(trimmed, isHsc: widget.isHsc, limit: 100);
         if (mounted) {
           setState(() {
-            _results = res;
+            _results = AppSorter.sortBy<InstitutionModel>(res, (i) => i.nameEn);
             _isLoading = false;
           });
         }

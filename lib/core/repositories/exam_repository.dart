@@ -170,11 +170,14 @@ class ExamRepository {
       throw StateError('Sign in again before starting a ranked exam.');
     }
 
-    final uri = Uri.parse(
-        '$baseUrl/api/v1/exam/${Uri.encodeComponent(slug)}/dynamic-session');
-    final response = await http
-        .get(uri, headers: _appAuthHeaders)
-        .timeout(const Duration(seconds: 15));
+    final response = await ResilientApiClient().getWithFallback(
+      '/api/v1/exam/${Uri.encodeComponent(slug)}/dynamic-session',
+      headers: _appAuthHeaders,
+      timeout: const Duration(seconds: 10),
+    );
+    if (response == null) {
+      throw StateError('Unable to reach exam server.');
+    }
     final data = _tryDecodeResponse(response.body);
     if (response.statusCode != 200 || data == null) {
       throw StateError(
@@ -564,7 +567,7 @@ class ExamRepository {
       }
       try {
         final endpoint = hasSessionId ? 'submit-session' : 'submit';
-        final uri = Uri.parse('$baseUrl/api/v1/exam/$slug/$endpoint');
+        final path = '/api/v1/exam/${Uri.encodeComponent(slug)}/$endpoint';
         final requestBody = jsonEncode({
           if (hasSessionId) 'sessionId': sessionId,
           'userId': effectiveUserId,
@@ -578,19 +581,19 @@ class ExamRepository {
             'questionsSnapshot': questionsSnapshot.map((q) => q.toJson()).toList(),
         });
         http.Response? response;
-        for (var attempt = 0; attempt < 5; attempt++) {
-          try {
-            response = await http.post(
-              uri,
-              headers: {
-                ..._appAuthHeaders,
-                'Content-Type': 'application/json',
-                'Idempotency-Key': idempotencyKey,
-              },
-              body: requestBody,
-            );
-          } catch (_) {
-            if (attempt == 4) {
+        for (var attempt = 0; attempt < 3; attempt++) {
+          response = await ResilientApiClient().postWithFallback(
+            path,
+            headers: {
+              ..._appAuthHeaders,
+              'Content-Type': 'application/json',
+              'Idempotency-Key': idempotencyKey,
+            },
+            body: requestBody,
+            timeout: const Duration(seconds: 8),
+          );
+          if (response == null) {
+            if (attempt == 2) {
               throw StateError(
                   'The server did not confirm your submission. Tap Retry to try again.');
             }

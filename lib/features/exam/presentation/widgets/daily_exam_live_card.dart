@@ -56,8 +56,8 @@ class DailyExamLiveCard extends StatelessWidget {
             ? (testData!['totalMarks'] as num?)?.toDouble() ?? 50.0
             : 50.0;
         final negativeMark = isLoaded
-            ? (testData!['negativeMark'] as num?)?.toDouble() ?? 0.25
-            : 0.25;
+            ? (testData!['negativeMark'] as num?)?.toDouble() ?? 0.0
+            : 0.0;
         final enrolledCount =
             isLoaded ? (testData!['enrolledCount'] as num?)?.toInt() ?? 0 : 0;
         final examId = isLoaded
@@ -72,11 +72,15 @@ class DailyExamLiveCard extends StatelessWidget {
             ? 'No Negative Marking'
             : 'Penalty: -${negativeMark.toStringAsFixed(2)}';
 
-        final enrolledText = isLoaded
-            ? (enrolledCount > 0
-                ? '🔥 $enrolledCount ${activeUni.shortCode} Candidates Submitted'
-                : '🔥 Today\'s Live Slot Open for ${activeUni.shortCode}')
-            : '⚠️ Backend Server Offline — No exam synced';
+        final enrolledText = !isLoaded
+            ? '⚠️ Backend Server Offline — No exam synced'
+            : (slotState == DailySlotState.upcoming
+                ? '⏳ Opens Today at 10:00 AM for ${activeUni.shortCode}'
+                : (slotState == DailySlotState.closed
+                    ? '🔒 Today\'s Live Window Closed for ${activeUni.shortCode}'
+                    : (enrolledCount > 0
+                        ? '🔥 $enrolledCount ${activeUni.shortCode} Candidates Submitted'
+                        : '🔥 Today\'s Live Slot Open for ${activeUni.shortCode}')));
 
         return Container(
           padding: const EdgeInsets.all(18),

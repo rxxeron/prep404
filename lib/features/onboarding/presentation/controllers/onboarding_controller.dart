@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/models/university_target.dart';
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/services/api_client.dart';
+import '../../../../core/services/offline_storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
 
 /// State Controller managing Onboarding navigation, academic history and target selections
@@ -120,7 +121,193 @@ class OnboardingController extends ChangeNotifier {
       for (final entry in initialProfile.targetSelections.entries) {
         _targetSelections[entry.key] = Set<String>.from(entry.value);
       }
+    } else {
+      // Auto-restore in-progress onboarding draft from offline storage
+      final draft = OfflineStorageService().getOnboardingDraft();
+      if (draft != null) {
+        _restoreFromDraft(draft);
+      }
     }
+  }
+
+  void _restoreFromDraft(Map<String, dynamic> draft) {
+    try {
+      if (draft['student_name'] != null &&
+          (draft['student_name'] as String).isNotEmpty) {
+        _studentName = draft['student_name'] as String;
+      }
+      if (draft['phone'] != null && (draft['phone'] as String).isNotEmpty) {
+        _phone = draft['phone'] as String;
+      }
+      if (draft['gender'] != null) {
+        _gender = draft['gender'] as String;
+      }
+      if (draft['division_id'] != null) {
+        _divisionId = draft['division_id'] as String;
+        _divisionName = draft['division_name'] as String?;
+      }
+      if (draft['district_id'] != null) {
+        _districtId = draft['district_id'] as String;
+        _districtName = draft['district_name'] as String?;
+      }
+      if (draft['medium'] != null) {
+        final medStr = draft['medium'] as String;
+        _medium = StudentMedium.values.firstWhere(
+          (m) => m.name == medStr,
+          orElse: () => StudentMedium.bangla,
+        );
+      }
+      if (draft['nctb_version'] != null) {
+        final nctbStr = draft['nctb_version'] as String;
+        _nctbVersion = NctbVersion.values.firstWhere(
+          (n) => n.name == nctbStr,
+          orElse: () => NctbVersion.bangla,
+        );
+      }
+      if (draft['curriculum'] != null) {
+        final curStr = draft['curriculum'] as String;
+        _curriculum = EnglishCurriculum.values.firstWhere(
+          (c) => c.name == curStr,
+          orElse: () => EnglishCurriculum.cambridge,
+        );
+      }
+      if (draft['academic_batch'] != null &&
+          (draft['academic_batch'] as String).isNotEmpty) {
+        _academicBatch = draft['academic_batch'] as String;
+      }
+      if (draft['institution_name'] != null) {
+        _institutionName = draft['institution_name'] as String;
+      }
+
+      // SSC details
+      if (draft['ssc_group'] != null) _sscGroup = draft['ssc_group'] as String;
+      if (draft['ssc_year'] != null) _sscYear = draft['ssc_year'] as String;
+      if (draft['ssc_gpa'] != null) _sscGpa = draft['ssc_gpa'] as String;
+      if (draft['ssc_institution'] != null) {
+        _sscInstitution = draft['ssc_institution'] as String;
+      }
+      if (draft['ssc_eiin'] != null) _sscEiin = draft['ssc_eiin'] as String;
+
+      // HSC details
+      if (draft['hsc_group'] != null) _hscGroup = draft['hsc_group'] as String;
+      if (draft['hsc_batch'] != null) _hscBatch = draft['hsc_batch'] as String;
+      if (draft['hsc_gpa'] != null) _hscGpa = draft['hsc_gpa'] as String;
+      if (draft['hsc_institution'] != null) {
+        _hscInstitution = draft['hsc_institution'] as String;
+      }
+      if (draft['hsc_eiin'] != null) _hscEiin = draft['hsc_eiin'] as String;
+
+      // O-Level details
+      if (draft['o_level_board'] != null) {
+        _oLevelBoard = draft['o_level_board'] as String;
+      }
+      if (draft['o_level_year'] != null) {
+        _oLevelYear = draft['o_level_year'] as String;
+      }
+      if (draft['o_level_subjects_count'] != null) {
+        _oLevelSubjectsCount = draft['o_level_subjects_count'] as int;
+      }
+      if (draft['o_level_grades'] != null) {
+        _oLevelGrades = draft['o_level_grades'] as String;
+      }
+      if (draft['o_level_gpa_equiv'] != null) {
+        _oLevelGpaEquiv = draft['o_level_gpa_equiv'] as String;
+      }
+      if (draft['o_level_school'] != null) {
+        _oLevelSchool = draft['o_level_school'] as String;
+      }
+      if (draft['o_level_institution_id'] != null) {
+        _oLevelInstitutionId = draft['o_level_institution_id'] as String;
+      }
+
+      // A-Level details
+      if (draft['a_level_board'] != null) {
+        _aLevelBoard = draft['a_level_board'] as String;
+      }
+      if (draft['a_level_batch'] != null) {
+        _aLevelBatch = draft['a_level_batch'] as String;
+      }
+      if (draft['a_level_status'] != null) {
+        _aLevelStatus = draft['a_level_status'] as String;
+      }
+      if (draft['a_level_subjects_count'] != null) {
+        _aLevelSubjectsCount = draft['a_level_subjects_count'] as int;
+      }
+      if (draft['a_level_grades'] != null) {
+        _aLevelGrades = draft['a_level_grades'] as String;
+      }
+      if (draft['a_level_gpa_equiv'] != null) {
+        _aLevelGpaEquiv = draft['a_level_gpa_equiv'] as String;
+      }
+      if (draft['a_level_college'] != null) {
+        _aLevelCollege = draft['a_level_college'] as String;
+      }
+      if (draft['a_level_institution_id'] != null) {
+        _aLevelInstitutionId = draft['a_level_institution_id'] as String;
+      }
+
+      // Targets
+      if (draft['target_selections'] is Map) {
+        final targets = draft['target_selections'] as Map;
+        for (final entry in targets.entries) {
+          if (entry.value is List) {
+            _targetSelections[entry.key.toString()] = Set<String>.from(
+                (entry.value as List).map((e) => e.toString()));
+          }
+        }
+      }
+
+      // Current step
+      if (draft['current_step'] is int) {
+        _currentStep = draft['current_step'] as int;
+      }
+    } catch (_) {}
+  }
+
+  void _autoSaveDraft() {
+    final draft = {
+      'current_step': _currentStep,
+      'medium': _medium.name,
+      'nctb_version': _nctbVersion.name,
+      'curriculum': _curriculum.name,
+      'academic_batch': _academicBatch,
+      'institution_name': _institutionName,
+      'student_name': _studentName,
+      'phone': _phone,
+      'gender': _gender,
+      'division_id': _divisionId,
+      'division_name': _divisionName,
+      'district_id': _districtId,
+      'district_name': _districtName,
+      'ssc_group': _sscGroup,
+      'ssc_year': _sscYear,
+      'ssc_gpa': _sscGpa,
+      'ssc_institution': _sscInstitution,
+      'ssc_eiin': _sscEiin,
+      'hsc_group': _hscGroup,
+      'hsc_batch': _hscBatch,
+      'hsc_gpa': _hscGpa,
+      'hsc_institution': _hscInstitution,
+      'hsc_eiin': _hscEiin,
+      'o_level_board': _oLevelBoard,
+      'o_level_year': _oLevelYear,
+      'o_level_subjects_count': _oLevelSubjectsCount,
+      'o_level_grades': _oLevelGrades,
+      'o_level_gpa_equiv': _oLevelGpaEquiv,
+      'o_level_school': _oLevelSchool,
+      'o_level_institution_id': _oLevelInstitutionId,
+      'a_level_board': _aLevelBoard,
+      'a_level_batch': _aLevelBatch,
+      'a_level_status': _aLevelStatus,
+      'a_level_subjects_count': _aLevelSubjectsCount,
+      'a_level_grades': _aLevelGrades,
+      'a_level_gpa_equiv': _aLevelGpaEquiv,
+      'a_level_college': _aLevelCollege,
+      'a_level_institution_id': _aLevelInstitutionId,
+      'target_selections':
+          _targetSelections.map((k, v) => MapEntry(k, v.toList())),
+    };
+    OfflineStorageService().saveOnboardingDraft(draft);
   }
 
   // Getters
@@ -179,24 +366,30 @@ class OnboardingController extends ChangeNotifier {
     _academicBatch = val == StudentMedium.bangla ? "HSC '25" : "A-Level '25";
     _hscBatch = _academicBatch;
     _aLevelBatch = _academicBatch;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setNctbVersion(NctbVersion val) {
     _nctbVersion = val;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setEnglishCurriculum(EnglishCurriculum val) {
     _curriculum = val;
-    final boardName = val == EnglishCurriculum.cambridge ? 'Cambridge International' : 'Pearson Edexcel';
+    final boardName = val == EnglishCurriculum.cambridge
+        ? 'Cambridge International'
+        : 'Pearson Edexcel';
     _oLevelBoard = boardName;
     _aLevelBoard = boardName;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setGender(String val) {
     _gender = val;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -205,12 +398,14 @@ class OnboardingController extends ChangeNotifier {
     _divisionName = name;
     _districtId = null;
     _districtName = null;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setDistrict({required String? id, required String? name}) {
     _districtId = id;
     _districtName = name;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -226,6 +421,7 @@ class OnboardingController extends ChangeNotifier {
     if (gpa != null) _sscGpa = gpa;
     if (institution != null) _sscInstitution = institution;
     if (eiin != null) _sscEiin = eiin;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -247,6 +443,7 @@ class OnboardingController extends ChangeNotifier {
       _institutionName = institution;
     }
     if (eiin != null) _hscEiin = eiin;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -254,6 +451,7 @@ class OnboardingController extends ChangeNotifier {
     _academicBatch = batch;
     _hscBatch = batch;
     _aLevelBatch = batch;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -273,6 +471,7 @@ class OnboardingController extends ChangeNotifier {
     if (gpaEquiv != null) _oLevelGpaEquiv = gpaEquiv;
     if (school != null) _oLevelSchool = school;
     if (institutionId != null) _oLevelInstitutionId = institutionId;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -300,18 +499,21 @@ class OnboardingController extends ChangeNotifier {
       _institutionName = college;
     }
     if (institutionId != null) _aLevelInstitutionId = institutionId;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setInstitutionName(String name) {
     _institutionName = name;
     _hscInstitution = name;
+    _autoSaveDraft();
     notifyListeners();
   }
 
   void setStudentDetails({required String name, required String phone}) {
     _studentName = name;
     _phone = phone;
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -322,6 +524,7 @@ class OnboardingController extends ChangeNotifier {
     } else {
       _targetSelections[uni.id] = {uni.disciplines.first.id};
     }
+    _autoSaveDraft();
     notifyListeners();
   }
 
@@ -338,10 +541,12 @@ class OnboardingController extends ChangeNotifier {
     } else {
       set.add(disciplineId);
     }
+    _autoSaveDraft();
     notifyListeners();
   }
 
-  bool isUniversitySelected(String uniId) => _targetSelections.containsKey(uniId);
+  bool isUniversitySelected(String uniId) =>
+      _targetSelections.containsKey(uniId);
   bool isDisciplineSelected(String uniId, String disciplineId) =>
       _targetSelections[uniId]?.contains(disciplineId) ?? false;
 
@@ -357,6 +562,7 @@ class OnboardingController extends ChangeNotifier {
   void nextStep() {
     if (_currentStep < 2) {
       _currentStep++;
+      _autoSaveDraft();
       notifyListeners();
     }
   }
@@ -364,6 +570,7 @@ class OnboardingController extends ChangeNotifier {
   void prevStep() {
     if (_currentStep > 0) {
       _currentStep--;
+      _autoSaveDraft();
       notifyListeners();
     }
   }
@@ -371,6 +578,7 @@ class OnboardingController extends ChangeNotifier {
   void jumpToStep(int step) {
     if (step >= 0 && step <= 2) {
       _currentStep = step;
+      _autoSaveDraft();
       notifyListeners();
     }
   }
@@ -381,7 +589,9 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
 
     final profile = UserProfile(
-      id: SupabaseService().currentUser?.id ?? _existingUserId ?? 'usr_${DateTime.now().millisecondsSinceEpoch}',
+      id: SupabaseService().currentUser?.id ??
+          _existingUserId ??
+          'usr_${DateTime.now().millisecondsSinceEpoch}',
       name: _studentName.isEmpty ? 'Candidate' : _studentName,
       phone: _phone,
       gender: _gender,
@@ -397,37 +607,53 @@ class OnboardingController extends ChangeNotifier {
       hscGroup: _hscGroup,
       hscBatch: _hscBatch,
       hscGpa: _hscGpa,
-      hscInstitution: _hscInstitution.isNotEmpty ? _hscInstitution : _institutionName,
+      hscInstitution:
+          _hscInstitution.isNotEmpty ? _hscInstitution : _institutionName,
       hscEiin: _hscEiin,
       oLevelBoard: _medium == StudentMedium.english ? _oLevelBoard : null,
       oLevelYear: _medium == StudentMedium.english ? _oLevelYear : null,
-      oLevelSubjectsCount: _medium == StudentMedium.english ? _oLevelSubjectsCount : null,
+      oLevelSubjectsCount:
+          _medium == StudentMedium.english ? _oLevelSubjectsCount : null,
       oLevelGrades: _medium == StudentMedium.english ? _oLevelGrades : null,
-      oLevelGpaEquiv: _medium == StudentMedium.english ? _oLevelGpaEquiv : null,
+      oLevelGpaEquiv:
+          _medium == StudentMedium.english ? _oLevelGpaEquiv : null,
       oLevelSchool: _medium == StudentMedium.english ? _oLevelSchool : null,
-      oLevelInstitutionId: _medium == StudentMedium.english ? _oLevelInstitutionId : null,
+      oLevelInstitutionId:
+          _medium == StudentMedium.english ? _oLevelInstitutionId : null,
       aLevelBoard: _medium == StudentMedium.english ? _aLevelBoard : null,
       aLevelBatch: _medium == StudentMedium.english ? _aLevelBatch : null,
       aLevelStatus: _medium == StudentMedium.english ? _aLevelStatus : null,
-      aLevelSubjectsCount: _medium == StudentMedium.english ? _aLevelSubjectsCount : null,
+      aLevelSubjectsCount:
+          _medium == StudentMedium.english ? _aLevelSubjectsCount : null,
       aLevelGrades: _medium == StudentMedium.english ? _aLevelGrades : null,
-      aLevelGpaEquiv: _medium == StudentMedium.english ? _aLevelGpaEquiv : null,
-      aLevelCollege: _medium == StudentMedium.english ? (_aLevelCollege.isNotEmpty ? _aLevelCollege : _institutionName) : null,
-      aLevelInstitutionId: _medium == StudentMedium.english ? _aLevelInstitutionId : null,
+      aLevelGpaEquiv:
+          _medium == StudentMedium.english ? _aLevelGpaEquiv : null,
+      aLevelCollege: _medium == StudentMedium.english
+          ? (_aLevelCollege.isNotEmpty ? _aLevelCollege : _institutionName)
+          : null,
+      aLevelInstitutionId:
+          _medium == StudentMedium.english ? _aLevelInstitutionId : null,
       medium: _medium,
       nctbVersion: _medium == StudentMedium.bangla ? _nctbVersion : null,
-      englishCurriculum: _medium == StudentMedium.english ? _curriculum : null,
+      englishCurriculum:
+          _medium == StudentMedium.english ? _curriculum : null,
       academicBatch: _academicBatch.trim().isNotEmpty
           ? _academicBatch.trim()
           : (_medium == StudentMedium.bangla ? "HSC '25" : "A-Level '25"),
       institutionName: _hscInstitution.trim().isNotEmpty
           ? _hscInstitution.trim()
-          : (_institutionName.trim().isNotEmpty ? _institutionName.trim() : 'General Education Board'),
+          : (_institutionName.trim().isNotEmpty
+              ? _institutionName.trim()
+              : 'General Education Board'),
       studyStreakDays: _existingStudyStreak,
-      targetSelections: _targetSelections.map((k, v) => MapEntry(k, v.toList())),
+      targetSelections:
+          _targetSelections.map((k, v) => MapEntry(k, v.toList())),
     );
 
     final saved = await _apiClient.submitOnboarding(profile);
+    if (saved) {
+      await OfflineStorageService().clearOnboardingDraft();
+    }
     _isSubmitting = false;
     notifyListeners();
     return saved ? profile : null;

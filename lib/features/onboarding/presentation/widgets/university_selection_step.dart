@@ -3,7 +3,9 @@ import '../../../../core/localization/app_strings.dart';
 import '../../../../core/models/university_target.dart';
 import '../../../../core/repositories/university_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_sorter.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
+import '../../../../core/widgets/prep_staggered_list.dart';
 import '../controllers/onboarding_controller.dart';
 
 /// Step 3: Targeted Private Universities & Disciplines (Dynamic from Supabase)
@@ -26,23 +28,45 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
   final UniversityRepository _repo = UniversityRepository();
   List<PrivateUniversity> _universities = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUniversities();
+    _loadUniversities(forceRefresh: true);
+    widget.controller.addListener(_onControllerChanged);
   }
 
-  Future<void> _loadUniversities() async {
-    final unis = await _repo.getUniversities();
-    unis.sort((a, b) => a.fullName
-        .toLowerCase()
-        .trim()
-        .compareTo(b.fullName.toLowerCase().trim()));
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (widget.controller.currentStep == 2 && !_isLoading && !_isRefreshing) {
+      _loadUniversities(forceRefresh: true);
+    }
+  }
+
+  Future<void> _loadUniversities({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    if (_universities.isEmpty) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() => _isRefreshing = true);
+    }
+
+    final unis = await _repo.getUniversities(forceRefresh: forceRefresh);
+    final sorted = AppSorter.sortBy<PrivateUniversity>(
+      unis,
+      (u) => u.fullName,
+    );
     if (mounted) {
       setState(() {
-        _universities = unis;
+        _universities = sorted;
         _isLoading = false;
+        _isRefreshing = false;
       });
     }
   }
@@ -206,14 +230,36 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          Text(
-            strings.targetUniTitle,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: colors.textPrimary,
-              letterSpacing: -0.3,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  strings.targetUniTitle,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: _isRefreshing
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+                        ),
+                      )
+                    : Icon(Icons.refresh_rounded, size: 20, color: colors.textMuted),
+                tooltip: 'Refresh upcoming schedules',
+                onPressed: _isRefreshing
+                    ? null
+                    : () => _loadUniversities(forceRefresh: true),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -228,8 +274,18 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
               child: PrepInlineSkeleton(count: 4),
             )
           else
-            ..._universities.map(
-                (uni) => _buildUniversityTile(context, colors, strings, uni)),
+            ..._universities.asMap().entries.map(
+                  (entry) => PrepStaggeredItem(
+                    index: entry.key,
+                    slideOffset: 16,
+                    child: _buildUniversityTile(
+                      context,
+                      colors,
+                      strings,
+                      entry.value,
+                    ),
+                  ),
+                ),
         ],
       ),
     );
@@ -391,22 +447,31 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
                           ),
                         ),
                         const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF10B981).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Upcoming',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF10B981),
-                            ),
-                          ),
+                        Builder(
+                          builder: (_) {
+                            final isTba = hasCycles &&
+                                uni.admissionCycles
+                                    .every((c) => c.examDate == null);
+                            final pillColor = isTba
+                                ? const Color(0xFFF59E0B)
+                                : const Color(0xFF10B981);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: pillColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                isTba ? 'TBA' : 'Upcoming',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: pillColor,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -428,26 +493,32 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: accent.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      cycle.slotTitle.isNotEmpty
-                                          ? cycle.slotTitle
-                                          : '${strings.slotLabel} ${cycle.slotNumber}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: accent,
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: accent.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        cycle.slotTitle.isNotEmpty
+                                            ? cycle.slotTitle
+                                            : '${strings.slotLabel} ${cycle.slotNumber}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: accent,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(width: 8),
                                   Text(
                                     cycle.applicationFee,
                                     style: TextStyle(
@@ -464,12 +535,18 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
                                   Icon(Icons.calendar_today_outlined,
                                       size: 11, color: colors.textMuted),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    '${strings.examDateLabel}: ${_formatDate(cycle.examDate)}${cycle.examTime.isNotEmpty ? ' (${cycle.examTime})' : ''}',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: colors.textPrimary,
-                                        fontWeight: FontWeight.w600),
+                                  Expanded(
+                                    child: Text(
+                                      cycle.examDate != null
+                                          ? '${strings.examDateLabel}: ${_formatDate(cycle.examDate!)}${cycle.examTime.isNotEmpty ? ' (${cycle.examTime})' : ''}'
+                                          : '${strings.examDateLabel}: To Be Announced',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: cycle.examDate != null
+                                              ? colors.textPrimary
+                                              : colors.textSecondary,
+                                          fontWeight: FontWeight.w600),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -485,6 +562,24 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: colors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (cycle.notes.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Icon(Icons.verified_outlined,
+                                        size: 11, color: colors.textMuted),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        cycle.notes,
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: colors.textMuted),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -592,9 +687,12 @@ class _UniversitySelectionStepState extends State<UniversitySelectionStep> {
                           grouped.putIfAbsent(dept, () => []).add(d);
                         }
 
+                        final sortedEntries = grouped.entries.toList()
+                          ..sort((a, b) => AppSorter.compareAZ09(a.key, b.key));
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: grouped.entries.map((entry) {
+                          children: sortedEntries.map((entry) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 10),
                               child: Column(

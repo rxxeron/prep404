@@ -147,6 +147,7 @@ class _AdmissionHikingRoadmapScreenState
             title: item.title,
             durationMinutes: item.durationMinutes,
             negativeMark: item.negativeMark,
+            isPracticeMode: true,
             onExit: () {
               Navigator.of(context).pop();
               _planService.markItemCompleted(item.id);

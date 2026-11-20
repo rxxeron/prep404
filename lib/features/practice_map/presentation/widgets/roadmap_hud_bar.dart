@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/admission_plan_service.dart';
+import '../../../../core/services/cache_service.dart';
 import '../../../../core/widgets/university_logo.dart';
 
 class RoadmapTopSelectorBar extends StatelessWidget {
@@ -163,6 +164,8 @@ class RoadmapGamifiedHudCard extends StatelessWidget {
     final earnedXp = completedCount * 150;
     final earnedStars = completedCount * 3;
     final totalStars = allItems.length * 3;
+    final streakDays = CacheService().loadProfile()?.studyStreakDays ?? 0;
+    final streakLabel = streakDays > 0 ? '$streakDays-Day Streak' : '0-Day Streak';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -188,7 +191,7 @@ class RoadmapGamifiedHudCard extends StatelessWidget {
                 _buildBadge(
                   icon: Icons.local_fire_department_rounded,
                   iconColor: const Color(0xFFFF5722),
-                  label: '3-Day Streak',
+                  label: streakLabel,
                 ),
                 _buildBadge(
                   icon: Icons.bolt_rounded,
@@ -299,7 +302,7 @@ class RoadmapPillarFilterBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _buildPill(PlanPreparationPillar.all, 'All Quest (${allItems.length})'),
+          _buildPill(PlanPreparationPillar.all, 'All Quests (${allItems.length})'),
           const SizedBox(width: 8),
           _buildPill(PlanPreparationPillar.topicWise, '🔬 Topic ($topicCount)'),
           const SizedBox(width: 8),

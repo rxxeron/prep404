@@ -3,6 +3,7 @@ import '../../../../core/localization/app_strings.dart';
 import '../../../../core/models/university_target.dart';
 import '../../../../core/repositories/institution_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_sorter.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
 import '../controllers/onboarding_controller.dart';
 import 'searchable_institution_dropdown.dart';
@@ -47,15 +48,15 @@ class _AcademicInfoStepState extends State<AcademicInfoStep> {
   List<String> _aLevelBatchOptions = [];
   List<String> _emBoards = [];
 
-  final List<String> _baseGroupOptions = [
+  final List<String> _baseGroupOptions = AppSorter.sortStrings([
     'Science',
     'Business Studies',
-    'Humanities'
-  ];
-  final List<String> _aLevelStatuses = [
+    'Humanities',
+  ]);
+  final List<String> _aLevelStatuses = AppSorter.sortStrings([
     'Completed',
-    'Appearing (Result Awaited)'
-  ];
+    'Appearing (Result Awaited)',
+  ]);
 
   bool _isHscAppearing = false;
   bool _isALevelAppearing = false;
@@ -111,21 +112,24 @@ class _AcademicInfoStepState extends State<AcademicInfoStep> {
 
       if (!mounted) return;
       setState(() {
-        _divisions = divs;
-        _sscYearOptions =
-            sscYears.isNotEmpty ? sscYears : _repo.getSscPassingYears(baseYear);
-        _hscBatchOptions = hscBatches.isNotEmpty
+        _divisions = AppSorter.sortBy<DivisionModel>(
+          divs,
+          (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+        );
+        _sscYearOptions = AppSorter.sortStrings(
+            sscYears.isNotEmpty ? sscYears : _repo.getSscPassingYears(baseYear));
+        _hscBatchOptions = AppSorter.sortStrings(hscBatches.isNotEmpty
             ? hscBatches
-            : _repo.getAllHscBatches(baseYear);
-        _oLevelYearOptions = oLevelYears.isNotEmpty
+            : _repo.getAllHscBatches(baseYear));
+        _oLevelYearOptions = AppSorter.sortStrings(oLevelYears.isNotEmpty
             ? oLevelYears
-            : _repo.getOLevelPassingYears(baseYear);
-        _aLevelBatchOptions = aLevelBatches.isNotEmpty
+            : _repo.getOLevelPassingYears(baseYear));
+        _aLevelBatchOptions = AppSorter.sortStrings(aLevelBatches.isNotEmpty
             ? aLevelBatches
-            : _repo.getAllALevelBatches(baseYear);
-        _emBoards = boards.isNotEmpty
+            : _repo.getAllALevelBatches(baseYear));
+        _emBoards = AppSorter.sortStrings(boards.isNotEmpty
             ? boards
-            : ['Cambridge International', 'Pearson Edexcel'];
+            : ['Cambridge International', 'Pearson Edexcel']);
         _isLoading = false;
       });
 
@@ -136,7 +140,10 @@ class _AcademicInfoStepState extends State<AcademicInfoStep> {
         final dists = await _repo.getDistricts(divisionId: currentDivId);
         if (mounted) {
           setState(() {
-            _districts = dists;
+            _districts = AppSorter.sortBy<DistrictModel>(
+              dists,
+              (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+            );
           });
         }
       }
@@ -160,16 +167,20 @@ class _AcademicInfoStepState extends State<AcademicInfoStep> {
 
     if (divId != null) {
       final dists = await _repo.getDistricts(divisionId: divId);
+      final sortedDists = AppSorter.sortBy<DistrictModel>(
+        dists,
+        (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+      );
       if (mounted) {
         setState(() {
-          _districts = dists;
+          _districts = sortedDists;
         });
-        if (dists.isNotEmpty) {
+        if (sortedDists.isNotEmpty) {
           widget.controller.setDistrict(
-            id: dists.first.id,
-            name: dists.first.nameEn.isNotEmpty
-                ? dists.first.nameEn
-                : dists.first.nameBn,
+            id: sortedDists.first.id,
+            name: sortedDists.first.nameEn.isNotEmpty
+                ? sortedDists.first.nameEn
+                : sortedDists.first.nameBn,
           );
         }
       }
@@ -184,13 +195,13 @@ class _AcademicInfoStepState extends State<AcademicInfoStep> {
 
   List<String> get _currentBatchOptions {
     if (widget.controller.medium == StudentMedium.bangla) {
-      return _hscBatchOptions.isNotEmpty
+      return AppSorter.sortStrings(_hscBatchOptions.isNotEmpty
           ? _hscBatchOptions
-          : ["HSC '24", "HSC '25", "HSC '23 (2nd Time)"];
+          : ["HSC '23 (2nd Time)", "HSC '24", "HSC '25"]);
     } else {
-      return _aLevelBatchOptions.isNotEmpty
+      return AppSorter.sortStrings(_aLevelBatchOptions.isNotEmpty
           ? _aLevelBatchOptions
-          : ["A-Level '24", "A-Level '25", "O-Level Completed"];
+          : ["A-Level '24", "A-Level '25", "O-Level Completed"]);
     }
   }
 

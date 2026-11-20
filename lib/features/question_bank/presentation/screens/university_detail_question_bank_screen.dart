@@ -144,10 +144,8 @@ class _UniversityDetailQuestionBankScreenState
             title: exam['title'] as String? ?? 'Admission Test',
             slug: exam['id'] as String? ?? exam['slug'] as String? ?? 'exam',
             durationMinutes: (exam['durationMinutes'] as num?)?.toInt() ?? 60,
-            negativeMark: (exam['negativeMarking'] as num?)?.toDouble() ??
-                (widget.universityKey.toLowerCase().contains('nsu')
-                    ? 0.0
-                    : 0.25),
+            negativeMark: (exam['negativeMarking'] as num?)?.toDouble() ?? 0.0,
+            isPracticeMode: true,
             candidateName: widget.candidateName,
             candidateCollege: widget.candidateCollege,
             onExit: () => Navigator.of(context).pop(),

@@ -60,7 +60,7 @@ class AdmissionCycleInfo {
   final int slotNumber;
   final String slotTitle;
   final DateTime? applicationDeadline;
-  final DateTime examDate;
+  final DateTime? examDate;
   final String examTime;
   final String applicationFee;
   final String venue;
@@ -74,7 +74,7 @@ class AdmissionCycleInfo {
     this.slotNumber = 1,
     this.slotTitle = '',
     this.applicationDeadline,
-    required this.examDate,
+    this.examDate,
     this.examTime = '',
     this.applicationFee = 'BDT 1,500',
     this.venue = '',

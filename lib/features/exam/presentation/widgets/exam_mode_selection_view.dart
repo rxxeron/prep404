@@ -11,6 +11,8 @@ class ExamModeSelectionView extends StatelessWidget {
   final int questionCount;
   final double negativeMark;
   final int durationMinutes;
+  final bool isPracticeMode;
+  final String? syllabusNote;
   final VoidCallback onExit;
   final ValueChanged<ExamRunnerMode> onSelectMode;
 
@@ -20,6 +22,8 @@ class ExamModeSelectionView extends StatelessWidget {
     required this.questionCount,
     required this.negativeMark,
     required this.durationMinutes,
+    this.isPracticeMode = false,
+    this.syllabusNote,
     required this.onExit,
     required this.onSelectMode,
   });
@@ -67,14 +71,17 @@ class ExamModeSelectionView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: colors.accentEmerald.withValues(alpha: 0.15),
+                          color: (isPracticeMode ? colors.primary : colors.accentEmerald)
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: colors.accentEmerald),
+                          border: Border.all(
+                            color: isPracticeMode ? colors.primary : colors.accentEmerald,
+                          ),
                         ),
                         child: Text(
-                          'LIVE EXAM',
+                          isPracticeMode ? 'PRACTICE MODE' : 'LIVE EXAM',
                           style: TextStyle(
-                            color: colors.accentEmerald,
+                            color: isPracticeMode ? colors.primary : colors.accentEmerald,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -82,7 +89,7 @@ class ExamModeSelectionView extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '$questionCount Questions • -$negativeMark Neg',
+                        '$questionCount Questions • ${negativeMark == 0 ? 'No Neg' : '-$negativeMark Neg'}',
                         style: TextStyle(color: colors.textSecondary, fontSize: 12),
                       ),
                     ],
@@ -98,7 +105,9 @@ class ExamModeSelectionView extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Standard syllabus: Higher Math, Quant Math, English, Physics & Analytical Reasoning.',
+                    (syllabusNote != null && syllabusNote!.trim().isNotEmpty)
+                        ? syllabusNote!
+                        : 'Timed $durationMinutes-minute test · $questionCount questions${negativeMark > 0 ? ' · -$negativeMark penalty per wrong answer' : ''}.',
                     style: TextStyle(color: colors.textSecondary, fontSize: 13),
                   ),
                 ],
@@ -137,7 +146,7 @@ class ExamModeSelectionView extends StatelessWidget {
               timeBadge: '${durationMinutes + 15} Mins (+15m)',
               description:
                   'Authentic pencil bubble sheet simulator. Extra 15 mins buffer time granted to simulate offline private university test halls.',
-              highlightBadge: 'RECOMMENDED FOR BRACU & NSU',
+              highlightBadge: 'AUTHENTIC EXAM HALL OMR',
               onTap: () => onSelectMode(ExamRunnerMode.omrBubble),
             ),
           ],

@@ -173,13 +173,13 @@ class RoadmapMilestoneNode extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    item.title,
+                    _cleanMilestoneTitle(item.title),
                     style: GoogleFonts.bricolageGrotesque(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: isLocked ? colorCream.withValues(alpha: 0.6) : colorCream,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
@@ -213,6 +213,20 @@ class RoadmapMilestoneNode extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _cleanMilestoneTitle(String raw) {
+    final cleaned = raw
+        .replaceFirst(
+          RegExp(r'^[A-Z]+\s+(?:ENGINEERING|BUSINESS|PHARMACY|ARCHITECTURE|LAW|ARTS|GENERAL)\s+Official Model Test\s*[-–:]\s*', caseSensitive: false),
+          '',
+        )
+        .replaceFirst(
+          RegExp(r'^[A-Z]+\s+Real Admission Test\s*[-–:]\s*', caseSensitive: false),
+          '',
+        )
+        .trim();
+    return cleaned.isNotEmpty ? cleaned : raw;
   }
 
   Widget _buildToken() {

@@ -43,7 +43,8 @@ class SupabaseService {
       final data = await client
           .from('universities')
           .select('*, academic_units(*), programs(*), admission_cycles(*)')
-          .order('full_name');
+          .eq('is_active', true)
+          .order('full_name', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -92,7 +93,7 @@ class SupabaseService {
       final data = await client
           .from('divisions')
           .select('id, name_en, name_bn, code')
-          .order('name_en');
+          .order('name_en', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -108,7 +109,7 @@ class SupabaseService {
       if (divisionId != null && divisionId.isNotEmpty) {
         query = query.eq('division_id', divisionId);
       }
-      final data = await query.order('name_en');
+      final data = await query.order('name_en', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -123,7 +124,7 @@ class SupabaseService {
       if (districtId != null && districtId.isNotEmpty) {
         query = query.eq('district_id', districtId);
       }
-      final data = await query.order('name_en');
+      final data = await query.order('name_en', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -164,7 +165,7 @@ class SupabaseService {
         }
       }
 
-      final data = await baseQuery.order('name_en').limit(limit);
+      final data = await baseQuery.order('name_en', ascending: true).limit(limit);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -193,7 +194,7 @@ class SupabaseService {
             'name.ilike.%$trimmed%,area.ilike.%$trimmed%,district.ilike.%$trimmed%');
       }
 
-      final data = await baseQuery.order('name').limit(limit);
+      final data = await baseQuery.order('name', ascending: true).limit(limit);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -269,7 +270,7 @@ class SupabaseService {
           .from('academic_boards')
           .select('board_name')
           .eq('is_active', true)
-          .order('sort_order', ascending: true);
+          .order('board_name', ascending: true);
       final list = res
           .map((e) => e['board_name']?.toString().trim())
           .where((e) => e != null && e.isNotEmpty)
@@ -289,7 +290,7 @@ class SupabaseService {
       if (universityId != null && universityId.isNotEmpty) {
         query = query.eq('university_id', universityId);
       }
-      final data = await query.order('name');
+      final data = await query.order('name', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (_) {
       return [];
@@ -349,6 +350,126 @@ class SupabaseService {
       );
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Result wrapper for Email / Password authentication attempts
+  Future<AuthResult> signUpWithPassword({
+    required String email,
+    required String password,
+    String? fullName,
+  }) async {
+    try {
+      final cleanEmail = email.trim().toLowerCase();
+      final res = await client.auth.signUp(
+        email: cleanEmail,
+        password: password,
+        data: fullName != null && fullName.isNotEmpty
+            ? {'full_name': fullName.trim()}
+            : null,
+      );
+      if (res.session != null) {
+        return AuthResult(
+          success: true,
+          token: res.session!.accessToken,
+          needsVerification: false,
+        );
+      }
+      return const AuthResult(
+        success: true,
+        needsVerification: true,
+      );
+    } on AuthException catch (e) {
+      return AuthResult(
+        success: false,
+        needsVerification: false,
+        errorMessage: e.message,
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        needsVerification: false,
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
+  /// Sign in with email & password
+  Future<AuthResult> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final cleanEmail = email.trim().toLowerCase();
+      final res = await client.auth.signInWithPassword(
+        email: cleanEmail,
+        password: password,
+      );
+      if (res.session != null) {
+        return AuthResult(
+          success: true,
+          token: res.session!.accessToken,
+          needsVerification: false,
+        );
+      }
+      return const AuthResult(
+        success: false,
+        needsVerification: false,
+        errorMessage: 'Sign-in failed. Please check your credentials.',
+      );
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        try {
+          await client.auth.resend(
+            type: OtpType.signup,
+            email: email.trim().toLowerCase(),
+          );
+        } catch (_) {}
+        return const AuthResult(
+          success: false,
+          needsVerification: true,
+          errorMessage: 'Email not verified. A 6-digit code has been sent.',
+        );
+      }
+      return AuthResult(
+        success: false,
+        needsVerification: false,
+        errorMessage: e.message,
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        needsVerification: false,
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
+  /// Verify 6-digit email OTP (for signup or email verification)
+  Future<String?> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanToken = token.trim();
+    try {
+      final res = await client.auth.verifyOTP(
+        email: cleanEmail,
+        token: cleanToken,
+        type: OtpType.signup,
+      );
+      if (res.session != null) return res.session!.accessToken;
+    } catch (_) {}
+
+    try {
+      final res = await client.auth.verifyOTP(
+        email: cleanEmail,
+        token: cleanToken,
+        type: OtpType.email,
+      );
+      return res.session?.accessToken;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -498,12 +619,26 @@ class SupabaseService {
     }
   }
 
-  /// Save candidate profile directly to Supabase users table
+  /// Save candidate profile directly to Supabase users table.
+  /// Handles duplicate phone unique constraint (23505) gracefully by retrying
+  /// without phone so academics and target universities still persist.
   Future<bool> saveUserProfile(UserProfile profile) async {
+    final dbMap = profile.toDbMap();
     try {
-      await client.from('users').upsert(profile.toDbMap());
+      await client.from('users').upsert(dbMap);
       return true;
     } catch (e) {
+      final errStr = e.toString();
+      if (errStr.contains('23505') || errStr.toLowerCase().contains('phone')) {
+        try {
+          final retryMap = Map<String, dynamic>.from(dbMap)..['phone'] = null;
+          await client.from('users').upsert(retryMap);
+          debugPrint('Saved user profile to Supabase (phone skipped due to uniqueness conflict)');
+          return true;
+        } catch (retryErr) {
+          debugPrint('Failed retry saving user profile to Supabase: $retryErr');
+        }
+      }
       debugPrint('Failed to save user profile to Supabase: $e');
       return false;
     }
@@ -527,4 +662,19 @@ class SupabaseService {
       return [];
     }
   }
+}
+
+/// Authentication response container for email & password auth attempts
+class AuthResult {
+  final bool success;
+  final String? token;
+  final bool needsVerification;
+  final String? errorMessage;
+
+  const AuthResult({
+    required this.success,
+    this.token,
+    this.needsVerification = false,
+    this.errorMessage,
+  });
 }

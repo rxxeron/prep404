@@ -92,7 +92,7 @@ class AdmissionPlanItem {
       totalQuestions: (json['totalQuestions'] as num?)?.toInt() ?? 25,
       durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 25,
       totalMarks: (json['totalMarks'] as num?)?.toDouble() ?? 25.0,
-      negativeMark: (json['negativeMark'] as num?)?.toDouble() ?? 0.25,
+      negativeMark: (json['negativeMark'] as num?)?.toDouble() ?? 0.0,
       difficulty: json['difficulty']?.toString() ?? 'Standard',
       isCompleted: json['isCompleted'] == true,
     );
@@ -280,6 +280,66 @@ class AdmissionPlanService {
 
   final CacheService _cache = CacheService();
 
+  /// Remove mismatched faculty/track exams (e.g. Pharmacy tests inside Engineering/CSE)
+  /// and raw oversized ingestion dumps from the student's roadmap.
+  AdmissionJourneyData _filterTrackMismatches(
+    AdmissionJourneyData journey,
+    String activeTrack,
+  ) {
+    final track = activeTrack.toLowerCase();
+    bool isAllowed(AdmissionPlanItem item) {
+      final t = item.title.toUpperCase();
+      if (t.contains('HEALER PYQ') || item.totalQuestions > 150) return false;
+      if (track.contains('eng') || track.contains('cse')) {
+        if (t.contains('PHARMACY') || t.contains('B.PHARM') || t.contains('BBA')) {
+          return false;
+        }
+      } else if (track.contains('bus') || track.contains('bba')) {
+        if (t.contains('PHARMACY') || t.contains('ENGINEERING')) return false;
+      } else if (track.contains('pharm') || track.contains('bio')) {
+        if (t.contains('BUSINESS') || t.contains('BBA') || t.contains('ENGINEERING')) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    final filteredStages = journey.stages.map((stage) {
+      final kept = stage.tests.where(isAllowed).toList();
+      return AdmissionJourneyStage(
+        stageNumber: stage.stageNumber,
+        title: stage.title,
+        subtitle: stage.subtitle,
+        testCount: kept.length,
+        tests: kept,
+      );
+    }).toList();
+
+    final filteredAll = journey.allPlanItems.where(isAllowed).toList();
+
+    return AdmissionJourneyData(
+      universityCode: journey.universityCode,
+      universityName: journey.universityName,
+      logoUrl: journey.logoUrl,
+      campusLocation: journey.campusLocation,
+      availableTracks: journey.availableTracks,
+      activeTrack: journey.activeTrack,
+      examDate: journey.examDate,
+      daysRemaining: journey.daysRemaining,
+      season: journey.season,
+      academicYear: journey.academicYear,
+      venue: journey.venue,
+      horizonDays: journey.horizonDays,
+      autoHorizonDays: journey.autoHorizonDays,
+      pacingLabel: journey.pacingLabel,
+      dailyFrequency: journey.dailyFrequency,
+      cadenceDescription: journey.cadenceDescription,
+      sections: journey.sections,
+      stages: filteredStages,
+      allPlanItems: filteredAll,
+    );
+  }
+
   /// Fetch complete dynamic journey from PostgreSQL Database / Fastify / Supabase
   Future<AdmissionJourneyData> fetchAdmissionJourney({
     required String universityKey,
@@ -301,7 +361,10 @@ class AdmissionPlanService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (data['success'] == true) {
           _cache.write(cacheKey, response.body);
-          final journey = AdmissionJourneyData.fromJson(data);
+          final journey = _filterTrackMismatches(
+            AdmissionJourneyData.fromJson(data),
+            track,
+          );
           return _enrichWithCompletion(journey);
         }
       }
@@ -312,7 +375,10 @@ class AdmissionPlanService {
     if (cached != null) {
       try {
         final data = jsonDecode(cached) as Map<String, dynamic>;
-        final journey = AdmissionJourneyData.fromJson(data);
+        final journey = _filterTrackMismatches(
+          AdmissionJourneyData.fromJson(data),
+          track,
+        );
         return _enrichWithCompletion(journey);
       } catch (_) {}
     }

@@ -4,6 +4,7 @@ import '../errors/app_logger.dart';
 import '../models/university_target.dart';
 import '../services/cache_service.dart';
 import '../services/supabase_service.dart';
+import '../utils/app_sorter.dart';
 
 /// Dynamic Private University & Programs Catalog Repository
 /// Exclusively pulls from Supabase PostgreSQL database tables: universities, academic_units, programs.
@@ -16,28 +17,42 @@ class UniversityRepository {
   final CacheService _cache = CacheService();
 
   /// Fetch universities with Result pattern returning explicit typed failures
-  Future<Result<List<PrivateUniversity>>> getUniversitiesResult() async {
-    const cacheKey = 'db_universities_full';
+  Future<Result<List<PrivateUniversity>>> getUniversitiesResult({bool forceRefresh = false}) async {
+    const cacheKey = 'db_universities_v2027_official';
+
+    if (!forceRefresh) {
+      final cached = _cache.read<String>(cacheKey);
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached) as List;
+          final mapped = list.map((u) => _mapJsonToUniversity(u as Map<String, dynamic>)).toList();
+          mapped.sort((a, b) => AppSorter.compareAZ09(a.fullName, b.fullName));
+          return Result.success(mapped);
+        } catch (e) {
+          AppLogger.warn('Corrupted cached universities, fetching fresh', e);
+        }
+      }
+    }
 
     try {
       final raw = await _supabase.fetchUniversities();
       if (raw.isNotEmpty) {
         final list = raw.map(_mapJsonToUniversity).toList();
-        list.sort((a, b) => a.fullName.toLowerCase().trim().compareTo(b.fullName.toLowerCase().trim()));
+        list.sort((a, b) => AppSorter.compareAZ09(a.fullName, b.fullName));
         _cache.write(cacheKey, jsonEncode(raw));
         return Result.success(list);
       }
     } catch (e) {
-      AppLogger.warn('Unable to fetch live universities from Supabase, attempting cache', e);
+      AppLogger.warn('Unable to fetch live universities from Supabase, attempting cache fallback', e);
     }
 
-    // Genuine local cache from previous network response
+    // Offline / fallback cache
     final cached = _cache.read<String>(cacheKey);
     if (cached != null) {
       try {
         final list = jsonDecode(cached) as List;
         final mapped = list.map((u) => _mapJsonToUniversity(u as Map<String, dynamic>)).toList();
-        mapped.sort((a, b) => a.fullName.toLowerCase().trim().compareTo(b.fullName.toLowerCase().trim()));
+        mapped.sort((a, b) => AppSorter.compareAZ09(a.fullName, b.fullName));
         return Result.success(mapped);
       } catch (e, st) {
         AppLogger.error('Failed to parse cached universities', e, st);
@@ -49,8 +64,8 @@ class UniversityRepository {
   }
 
   /// Fetch universities with backward-compatible list return
-  Future<List<PrivateUniversity>> getUniversities() async {
-    final result = await getUniversitiesResult();
+  Future<List<PrivateUniversity>> getUniversities({bool forceRefresh = false}) async {
+    final result = await getUniversitiesResult(forceRefresh: forceRefresh);
     return result.fold(
       (data) => data,
       (failure) {
@@ -98,7 +113,7 @@ class UniversityRepository {
         examSections: ['General English', 'Mathematics', 'Aptitude'],
       );
     }).toList();
-    disciplines.sort((a, b) => a.name.toLowerCase().trim().compareTo(b.name.toLowerCase().trim()));
+    disciplines.sort((a, b) => AppSorter.compareAZ09(a.name, b.name));
 
     // Map admission cycles and examination slots
     final rawCycles = (json['admission_cycles'] as List? ?? []);
@@ -110,7 +125,10 @@ class UniversityRepository {
         })
         .map((c) {
       final cMap = c as Map<String, dynamic>;
-      final examDate = DateTime.tryParse(cMap['exam_date']?.toString() ?? '') ?? DateTime(2026, 11, 28);
+      final rawExamDate = cMap['exam_date']?.toString();
+      final examDate = (rawExamDate != null && rawExamDate.isNotEmpty)
+          ? DateTime.tryParse(rawExamDate)
+          : null;
       final appDeadline = cMap['application_deadline'] != null
           ? DateTime.tryParse(cMap['application_deadline'].toString())
           : null;
@@ -136,7 +154,8 @@ class UniversityRepository {
     }).toList();
 
     cycles.sort((a, b) => a.slotNumber.compareTo(b.slotNumber));
-    final estDate = cycles.isNotEmpty ? cycles.first.examDate : DateTime(2026, 11, 28);
+    final firstDatedCycle = cycles.where((c) => c.examDate != null).firstOrNull;
+    final estDate = firstDatedCycle?.examDate ?? DateTime(2027, 1, 15);
     final examFormat = json['exam_format_type'] as String? ?? 'faculty_wide';
     final examSummary = json['exam_pattern_summary'] as String? ?? '';
 

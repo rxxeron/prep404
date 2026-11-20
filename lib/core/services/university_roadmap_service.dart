@@ -509,38 +509,7 @@ class UniversityRoadmapService {
   }
 
   List<UniversityLeaderboardEntry> _generateDefaultLeaderboard() {
-    return const [
-      UniversityLeaderboardEntry(
-        rank: '#1',
-        name: 'Tanvir Hossain',
-        score: '96.5%',
-        badge: '👑 Summit Master',
-      ),
-      UniversityLeaderboardEntry(
-        rank: '#2',
-        name: 'Nusrat Jahan',
-        score: '94.0%',
-        badge: '⚡ Speed Demon',
-      ),
-      UniversityLeaderboardEntry(
-        rank: '#3',
-        name: 'Ahsanul Kabir',
-        score: '91.5%',
-        badge: '🎯 Precision Pro',
-      ),
-      UniversityLeaderboardEntry(
-        rank: '#4',
-        name: 'Fariha Anjum',
-        score: '88.5%',
-        badge: '🚀 Top 5%',
-      ),
-      UniversityLeaderboardEntry(
-        rank: '#5',
-        name: 'Saadman Rahman',
-        score: '85.0%',
-        badge: '🔥 Streak Champ',
-      ),
-    ];
+    return const [];
   }
 
   List<UniversitySectionPattern> _defaultSectionsForDiscipline(

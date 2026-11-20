@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../errors/app_logger.dart';
 import '../services/cache_service.dart';
 import '../services/supabase_service.dart';
+import '../utils/app_sorter.dart';
 
 class DivisionModel {
   final String id;
@@ -161,51 +162,77 @@ class InstitutionRepository {
   final SupabaseService _supabase = SupabaseService();
   final CacheService _cache = CacheService();
 
-  /// Get all 8 Divisions from database with local cache
+  /// Get all 8 Divisions from database (Network-First with local cache fallback)
   Future<List<DivisionModel>> getDivisions() async {
     const cacheKey = 'geo_divisions';
-    final cached = _cache.read<String>(cacheKey);
-    if (cached != null) {
-      try {
-        final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
-        if (list.isNotEmpty) return list.map(DivisionModel.fromJson).toList();
-      } catch (_) {}
-    }
 
+    // 1. Try Live Supabase fetch first
     try {
       final raw = await _supabase.fetchDivisions();
       if (raw.isNotEmpty) {
         _cache.write(cacheKey, jsonEncode(raw));
-        return raw.map(DivisionModel.fromJson).toList();
+        final models = raw.map(DivisionModel.fromJson).toList();
+        return AppSorter.sortBy<DivisionModel>(
+          models,
+          (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+        );
       }
     } catch (e) {
-      AppLogger.warn('Failed to fetch divisions from database', e);
+      AppLogger.warn('Failed to fetch live divisions from database, attempting cache', e);
+    }
+
+    // 2. Offline / Network error fallback to local cache
+    final cached = _cache.read<String>(cacheKey);
+    if (cached != null) {
+      try {
+        final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
+        if (list.isNotEmpty) {
+          final models = list.map(DivisionModel.fromJson).toList();
+          return AppSorter.sortBy<DivisionModel>(
+            models,
+            (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+          );
+        }
+      } catch (_) {}
     }
 
     return [];
   }
 
-  /// Get Districts by Division from database with local cache
+  /// Get Districts by Division from database (Network-First with local cache fallback)
   Future<List<DistrictModel>> getDistricts({String? divisionId}) async {
     final cacheKey = 'geo_districts_${divisionId ?? 'all'}';
-    final cached = _cache.read<String>(cacheKey);
-    if (cached != null) {
-      try {
-        final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
-        if (list.isNotEmpty) return list.map(DistrictModel.fromJson).toList();
-      } catch (e) {
-        AppLogger.warn('Failed to parse cached districts for $divisionId', e);
-      }
-    }
 
+    // 1. Try Live Supabase fetch first
     try {
       final raw = await _supabase.fetchDistricts(divisionId: divisionId);
       if (raw.isNotEmpty) {
         _cache.write(cacheKey, jsonEncode(raw));
-        return raw.map(DistrictModel.fromJson).toList();
+        final models = raw.map(DistrictModel.fromJson).toList();
+        return AppSorter.sortBy<DistrictModel>(
+          models,
+          (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+        );
       }
     } catch (e) {
-      AppLogger.warn('Failed to fetch districts from database for $divisionId', e);
+      AppLogger.warn('Failed to fetch live districts from database for $divisionId, attempting cache', e);
+    }
+
+    // 2. Offline / Network error fallback to local cache
+    final cached = _cache.read<String>(cacheKey);
+    if (cached != null) {
+      try {
+        final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
+        if (list.isNotEmpty) {
+          final models = list.map(DistrictModel.fromJson).toList();
+          return AppSorter.sortBy<DistrictModel>(
+            models,
+            (d) => d.nameEn.isNotEmpty ? d.nameEn : d.nameBn,
+          );
+        }
+      } catch (e) {
+        AppLogger.warn('Failed to parse cached districts for $divisionId', e);
+      }
     }
 
     return [];
@@ -228,7 +255,10 @@ class InstitutionRepository {
       if (cached != null) {
         try {
           final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
-          if (list.isNotEmpty) return list.map(InstitutionModel.fromJson).toList();
+          if (list.isNotEmpty) {
+            final models = list.map(InstitutionModel.fromJson).toList();
+            return AppSorter.sortBy<InstitutionModel>(models, (i) => i.nameEn);
+          }
         } catch (_) {}
       }
     }
@@ -239,7 +269,8 @@ class InstitutionRepository {
         if (trimmed.isEmpty) {
           _cache.write(cacheKey, jsonEncode(raw));
         }
-        return raw.map(InstitutionModel.fromJson).toList();
+        final models = raw.map(InstitutionModel.fromJson).toList();
+        return AppSorter.sortBy<InstitutionModel>(models, (i) => i.nameEn);
       }
     } catch (_) {}
 
@@ -260,7 +291,10 @@ class InstitutionRepository {
       if (cached != null) {
         try {
           final list = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
-          if (list.isNotEmpty) return list.map(EnglishMediumInstitutionModel.fromJson).toList();
+          if (list.isNotEmpty) {
+            final models = list.map(EnglishMediumInstitutionModel.fromJson).toList();
+            return AppSorter.sortBy<EnglishMediumInstitutionModel>(models, (i) => i.name);
+          }
         } catch (_) {}
       }
     }
@@ -276,44 +310,57 @@ class InstitutionRepository {
         if (trimmed.isEmpty) {
           _cache.write(cacheKey, jsonEncode(raw));
         }
-        return raw.map(EnglishMediumInstitutionModel.fromJson).toList();
+        final models = raw.map(EnglishMediumInstitutionModel.fromJson).toList();
+        return AppSorter.sortBy<EnglishMediumInstitutionModel>(models, (i) => i.name);
       }
     } catch (_) {}
 
     return [];
   }
 
-  /// Fetch active effective academic admission year from relational database
+  /// Fetch active effective academic admission year from relational database (Network-First)
   Future<int> getEffectiveAdmissionYear() async {
     const cacheKey = 'relational_admission_year';
+    try {
+      final year = await _supabase.fetchEffectiveAdmissionYear();
+      _cache.write(cacheKey, year.toString());
+      return year;
+    } catch (_) {}
+
     final cached = _cache.read<String>(cacheKey);
     if (cached != null) {
       final val = int.tryParse(cached);
       if (val != null) return val;
     }
-    final year = await _supabase.fetchEffectiveAdmissionYear();
-    _cache.write(cacheKey, year.toString());
-    return year;
+    return 2026;
   }
 
-  /// Fetch distinct curriculum examination boards from relational English Medium database
+  /// Fetch distinct curriculum examination boards from relational English Medium database (Network-First)
   Future<List<String>> getEnglishMediumBoards() async {
     const cacheKey = 'relational_em_boards';
+    try {
+      final boards = await _supabase.fetchEnglishMediumBoards();
+      if (boards.isNotEmpty) {
+        final sorted = AppSorter.sortStrings(boards);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
+      }
+    } catch (_) {}
+
     final cached = _cache.read<String>(cacheKey);
     if (cached != null) {
       try {
         final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
       } catch (_) {}
     }
-    final boards = await _supabase.fetchEnglishMediumBoards();
-    _cache.write(cacheKey, jsonEncode(boards));
-    return boards;
+    return ['Cambridge International', 'Pearson Edexcel'];
   }
 
   /// Relationally compute valid SSC passing years from database admission cycle year
   List<String> getSscPassingYears(int baseYear) {
-    return List.generate(6, (i) => (baseYear - 2 - i).toString());
+    final list = List.generate(6, (i) => (baseYear - 2 - i).toString());
+    return AppSorter.sortStrings(list);
   }
 
   /// Relationally compute HSC batches linked directly to the selected SSC year
@@ -333,18 +380,23 @@ class InstitutionRepository {
           list.add("HSC '$regularShort");
         }
         list.add("HSC '$secondShort (2nd Time)");
-        return list;
+        return AppSorter.sortStrings(list);
       }
     }
     final curShort = ((baseYear - 1) % 100).toString().padLeft(2, '0');
     final nextShort = (baseYear % 100).toString().padLeft(2, '0');
     final prevShort = ((baseYear - 2) % 100).toString().padLeft(2, '0');
-    return ["HSC '$curShort", "HSC '$nextShort (Appearing)", "HSC '$prevShort (2nd Time)"];
+    return AppSorter.sortStrings([
+      "HSC '$curShort",
+      "HSC '$nextShort (Appearing)",
+      "HSC '$prevShort (2nd Time)",
+    ]);
   }
 
   /// Relationally compute valid O-Level passing years from database admission cycle year
   List<String> getOLevelPassingYears(int baseYear) {
-    return List.generate(6, (i) => (baseYear - 2 - i).toString());
+    final list = List.generate(6, (i) => (baseYear - 2 - i).toString());
+    return AppSorter.sortStrings(list);
   }
 
   /// Relationally compute A-Level batches linked directly to selected O-Level year
@@ -364,13 +416,17 @@ class InstitutionRepository {
           list.add("A-Level '$regularShort");
         }
         list.add("A-Level '$secondShort (2nd Time)");
-        return list;
+        return AppSorter.sortStrings(list);
       }
     }
     final curShort = ((baseYear - 1) % 100).toString().padLeft(2, '0');
     final nextShort = (baseYear % 100).toString().padLeft(2, '0');
     final prevShort = ((baseYear - 2) % 100).toString().padLeft(2, '0');
-    return ["A-Level '$curShort", "A-Level '$nextShort (Appearing)", "A-Level '$prevShort (2nd Time)"];
+    return AppSorter.sortStrings([
+      "A-Level '$curShort",
+      "A-Level '$nextShort (Appearing)",
+      "A-Level '$prevShort (2nd Time)",
+    ]);
   }
 
   /// Relational NCTB transition rules: HSC streams permitted from SSC stream
@@ -379,50 +435,54 @@ class InstitutionRepository {
       return ['Humanities'];
     }
     if (sscGroup == 'Business Studies') {
-      return ['Business Studies', 'Humanities'];
+      return AppSorter.sortStrings(['Business Studies', 'Humanities']);
     }
-    return ['Science', 'Business Studies', 'Humanities'];
+    return AppSorter.sortStrings(['Science', 'Business Studies', 'Humanities']);
   }
 
-  /// Fetch dynamic SSC passing years from database `academic_batches` table
+  /// Fetch dynamic SSC passing years from database `academic_batches` table (Network-First)
   Future<List<String>> getDynamicSscPassingYears(int baseYear) async {
     const cacheKey = 'db_ssc_passing_years';
-    final cached = _cache.read<String>(cacheKey);
-    if (cached != null) {
-      try {
-        final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
-      } catch (_) {}
-    }
     try {
       final rows = await _supabase.fetchAcademicBatches(examLevel: 'SSC');
       if (rows.isNotEmpty) {
         final years = rows.map((r) => r['batch_name'].toString()).toList();
-        _cache.write(cacheKey, jsonEncode(years));
-        return years;
+        final sorted = AppSorter.sortStrings(years);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
       }
     } catch (_) {}
-    return getSscPassingYears(baseYear);
-  }
 
-  /// Fetch all dynamic active HSC batches from database `academic_batches` table
-  Future<List<String>> getDynamicHscBatches(int baseYear) async {
-    const cacheKey = 'db_all_hsc_batches';
     final cached = _cache.read<String>(cacheKey);
     if (cached != null) {
       try {
         final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
       } catch (_) {}
     }
+    return getSscPassingYears(baseYear);
+  }
+
+  /// Fetch all dynamic active HSC batches from database `academic_batches` table (Network-First)
+  Future<List<String>> getDynamicHscBatches(int baseYear) async {
+    const cacheKey = 'db_all_hsc_batches';
     try {
       final rows = await _supabase.fetchAcademicBatches(examLevel: 'HSC');
       if (rows.isNotEmpty) {
         final batches = rows.map((r) => r['batch_name'].toString()).toList();
-        _cache.write(cacheKey, jsonEncode(batches));
-        return batches;
+        final sorted = AppSorter.sortStrings(batches);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
       }
     } catch (_) {}
+
+    final cached = _cache.read<String>(cacheKey);
+    if (cached != null) {
+      try {
+        final list = (jsonDecode(cached) as List).cast<String>();
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
+      } catch (_) {}
+    }
     return getAllHscBatches(baseYear);
   }
 
@@ -432,14 +492,14 @@ class InstitutionRepository {
     final curShort = ((baseYear - 1) % 100).toString().padLeft(2, '0');
     final prevShort = ((baseYear - 2) % 100).toString().padLeft(2, '0');
     final prev2Short = ((baseYear - 3) % 100).toString().padLeft(2, '0');
-    return [
+    return AppSorter.sortStrings([
       "HSC '$nextShort (Appearing)",
       "HSC '$curShort",
       "HSC '$curShort (2nd Time)",
       "HSC '$prevShort",
       "HSC '$prevShort (2nd Time)",
       "HSC '$prev2Short (2nd Time)",
-    ];
+    ]);
   }
 
   /// Fetch dynamic HSC batches from database `academic_batches` table optionally filtered
@@ -447,45 +507,49 @@ class InstitutionRepository {
     return getDynamicHscBatches(baseYear);
   }
 
-  /// Fetch dynamic O-Level passing years from database `academic_batches` table
+  /// Fetch dynamic O-Level passing years from database `academic_batches` table (Network-First)
   Future<List<String>> getDynamicOLevelPassingYears(int baseYear) async {
     const cacheKey = 'db_olevel_passing_years';
-    final cached = _cache.read<String>(cacheKey);
-    if (cached != null) {
-      try {
-        final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
-      } catch (_) {}
-    }
     try {
       final rows = await _supabase.fetchAcademicBatches(examLevel: 'O_LEVEL');
       if (rows.isNotEmpty) {
         final years = rows.map((r) => r['batch_name'].toString()).toList();
-        _cache.write(cacheKey, jsonEncode(years));
-        return years;
+        final sorted = AppSorter.sortStrings(years);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
       }
     } catch (_) {}
-    return getOLevelPassingYears(baseYear);
-  }
 
-  /// Fetch all dynamic active A-Level batches from database `academic_batches` table
-  Future<List<String>> getDynamicALevelBatches(int baseYear) async {
-    const cacheKey = 'db_all_alevel_batches';
     final cached = _cache.read<String>(cacheKey);
     if (cached != null) {
       try {
         final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
       } catch (_) {}
     }
+    return getOLevelPassingYears(baseYear);
+  }
+
+  /// Fetch all dynamic active A-Level batches from database `academic_batches` table (Network-First)
+  Future<List<String>> getDynamicALevelBatches(int baseYear) async {
+    const cacheKey = 'db_all_alevel_batches';
     try {
       final rows = await _supabase.fetchAcademicBatches(examLevel: 'A_LEVEL');
       if (rows.isNotEmpty) {
         final batches = rows.map((r) => r['batch_name'].toString()).toList();
-        _cache.write(cacheKey, jsonEncode(batches));
-        return batches;
+        final sorted = AppSorter.sortStrings(batches);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
       }
     } catch (_) {}
+
+    final cached = _cache.read<String>(cacheKey);
+    if (cached != null) {
+      try {
+        final list = (jsonDecode(cached) as List).cast<String>();
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
+      } catch (_) {}
+    }
     return getAllALevelBatches(baseYear);
   }
 
@@ -495,14 +559,14 @@ class InstitutionRepository {
     final curShort = ((baseYear - 1) % 100).toString().padLeft(2, '0');
     final prevShort = ((baseYear - 2) % 100).toString().padLeft(2, '0');
     final prev2Short = ((baseYear - 3) % 100).toString().padLeft(2, '0');
-    return [
+    return AppSorter.sortStrings([
       "A-Level '$nextShort (Appearing)",
       "A-Level '$curShort",
       "A-Level '$curShort (2nd Time)",
       "A-Level '$prevShort",
       "A-Level '$prevShort (2nd Time)",
       "A-Level '$prev2Short (2nd Time)",
-    ];
+    ]);
   }
 
   /// Fetch dynamic A-Level batches from database `academic_batches` table optionally filtered
@@ -517,14 +581,15 @@ class InstitutionRepository {
     if (cached != null) {
       try {
         final list = (jsonDecode(cached) as List).cast<String>();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty) return AppSorter.sortStrings(list);
       } catch (_) {}
     }
     try {
       final boards = await _supabase.fetchAcademicBoards();
       if (boards.isNotEmpty) {
-        _cache.write(cacheKey, jsonEncode(boards));
-        return boards;
+        final sorted = AppSorter.sortStrings(boards);
+        _cache.write(cacheKey, jsonEncode(sorted));
+        return sorted;
       }
     } catch (_) {}
     return getEnglishMediumBoards();

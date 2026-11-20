@@ -423,6 +423,8 @@ final appRouterProvider =
                 slug: extra['slug'] as String? ?? 'live-model-test',
                 title: extra['title'] as String?,
                 durationMinutes: extra['durationMinutes'] as int? ?? 30,
+                negativeMark: (extra['negativeMark'] as num?)?.toDouble() ?? 0.0,
+                isPracticeMode: extra['isPracticeMode'] as bool? ?? false,
                 candidateName: profile?.name ?? 'Candidate',
                 candidateCollege: profile?.institutionName ?? 'College',
                 onExit: () => context.pop(),

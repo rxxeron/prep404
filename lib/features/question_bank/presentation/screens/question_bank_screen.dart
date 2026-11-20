@@ -7,7 +7,9 @@ import '../../../../core/repositories/exam_repository.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/university_logo.dart';
 import '../../../../core/widgets/prep_skeleton.dart';
+import '../../../../core/widgets/prep_staggered_list.dart';
 import '../../../exam/presentation/screens/model_test_catalog_screen.dart';
+import '../../../printable_omr/services/printable_omr_launcher.dart';
 import 'university_detail_question_bank_screen.dart';
 import 'subject_chapter_directory_screen.dart';
 
@@ -240,50 +242,94 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Search Bar
-                    Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search_rounded,
-                              color: Color(0xFF9CA3AF), size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              onChanged: (val) =>
-                                  setState(() => _searchQuery = val),
-                              decoration: const InputDecoration(
-                                hintText:
-                                    'Search private uni question bank (NSU, BRACU, AUST...)',
-                                hintStyle: TextStyle(
-                                  color: Color(0xFF9CA3AF),
-                                  fontSize: 13,
+                    // 1. Search Bar + Scan OMR QR Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search_rounded,
+                                    color: Color(0xFF9CA3AF), size: 22),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (val) =>
+                                        setState(() => _searchQuery = val),
+                                    decoration: InputDecoration(
+                                      hintText: _selectedFilterPill == 1
+                                          ? 'Search subjects (Physics, Math, English...)'
+                                          : (_selectedFilterPill == 2
+                                              ? 'Search full model tests...'
+                                              : 'Search private universities (NSU, BRACU, AUST...)'),
+                                      hintStyle: const TextStyle(
+                                        color: Color(0xFF9CA3AF),
+                                        fontSize: 13,
+                                      ),
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
+                                  ),
                                 ),
-                                border: InputBorder.none,
-                                isDense: true,
+                                if (_searchQuery.isNotEmpty)
+                                  SizedBox(
+                                    width: 48,
+                                    height: 48,
+                                    child: InkWell(
+                                      onTap: () => setState(() => _searchQuery = ''),
+                                      child: const Center(
+                                        child: Icon(Icons.close_rounded,
+                                            color: Color(0xFF9CA3AF), size: 18),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Tooltip(
+                          message: 'Scan Printable OMR QR Code',
+                          child: InkWell(
+                            onTap: () => PrintableOmrLauncher.openQrScanner(context),
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: colors.primary.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.qr_code_scanner_rounded,
+                                      size: 20, color: colors.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Scan QR',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          if (_searchQuery.isNotEmpty)
-                            SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: InkWell(
-                                onTap: () => setState(() => _searchQuery = ''),
-                                child: const Center(
-                                  child: Icon(Icons.close_rounded,
-                                      color: Color(0xFF9CA3AF), size: 18),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 18),
 
@@ -292,7 +338,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Private University Model Tests & Q-Bank',
+                          _selectedFilterPill == 1
+                              ? 'Subject-Wise Practice & Chapters'
+                              : (_selectedFilterPill == 2
+                                  ? 'Full Admission Model Tests'
+                                  : 'Private University Question Banks'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -303,16 +353,14 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E6),
+                            color: colors.surfaceElevated,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: const Color(0xFFFF7A36)
-                                    .withValues(alpha: 0.3)),
+                            border: Border.all(color: colors.border),
                           ),
-                          child: const Text(
-                            'LIVE',
+                          child: Text(
+                            '${filteredCards.length} Available',
                             style: TextStyle(
-                              color: Color(0xFFFF7A36),
+                              color: colors.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -440,11 +488,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
-                          childAspectRatio: 0.95,
+                          childAspectRatio: 1.12,
                         ),
                         itemBuilder: (context, index) {
                           final card = filteredCards[index];
-                          return _buildGlossyTrackCard(context, card);
+                          return PrepStaggeredItem(
+                            index: index,
+                            slideOffset: 16,
+                            child: _buildGlossyTrackCard(context, card),
+                          );
                         },
                       ),
                     const SizedBox(height: 20),
@@ -685,49 +737,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Row: Live Badge
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.sensors_rounded,
-                              color: Colors.white, size: 10),
-                          SizedBox(width: 3),
-                          Text(
-                            'Live',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Big White Title with University Logo
+                  // Top Row: Logo/Icon on left, clean count badge on right
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (_selectedFilterPill == 0 ||
                           (_selectedFilterPill == 2 &&
-                              card['filterKey'] != null)) ...[
+                              card['filterKey'] != null))
                         UniversityLogo(
                           universityKey:
                               (badge ?? card['filterKey'] ?? title).toString(),
@@ -735,47 +751,60 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           size: 32,
                           isCircle: true,
                           showShadow: true,
+                        )
+                      else
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(watermarkIcon,
+                              color: Colors.white, size: 18),
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      if (badge != null && badge != title) ...[
+                      if (badge != null &&
+                          _selectedFilterPill != 1 &&
+                          badge.toLowerCase() != title.toLowerCase())
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                              horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.white.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             badge,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 10.5,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                      ],
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black26,
-                                offset: Offset(0, 2),
-                                blurRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
+                  ),
+
+                  const Spacer(),
+
+                  // Big White Title
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 2),
 
@@ -792,10 +821,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   ),
                   const SizedBox(height: 6),
 
-                  // Calendar row
+                  // Location / Topic row
                   Row(
                     children: [
-                      Icon(Icons.calendar_month_outlined,
+                      Icon(
+                          _selectedFilterPill == 1
+                              ? Icons.menu_book_outlined
+                              : Icons.location_on_outlined,
                           size: 12,
                           color: Colors.white.withValues(alpha: 0.85)),
                       const SizedBox(width: 4),

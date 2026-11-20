@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../config/app_config.dart';
 import '../models/user_profile.dart';
 import '../models/university_target.dart';
+import '../network/resilient_api_client.dart';
 import '../repositories/university_repository.dart';
 import 'cache_service.dart';
 import 'supabase_service.dart';
@@ -36,7 +37,7 @@ class ApiClient {
     };
   }
 
-  /// Submit Onboarding profile strictly through authoritative Core API (server writes to Supabase)
+  /// Submit Onboarding profile through Resilient Core API (with direct Supabase fallback + pending-sync tracking)
   Future<bool> submitOnboarding(UserProfile profile) async {
     final token = _cache.read<String>('auth_token') ??
         SupabaseService().currentAccessToken;
@@ -47,15 +48,17 @@ class ApiClient {
     }
 
     try {
-      final response = await _httpClient
-          .post(
-            Uri.parse('$baseUrl/user/onboarding'),
-            headers: _headers(token),
-            body: jsonEncode(profile.toJson()),
-          )
-          .timeout(const Duration(seconds: 7));
+      final response = await ResilientApiClient().postWithFallback(
+        '/api/v1/user/onboarding',
+        headers: _headers(token),
+        body: jsonEncode(profile.toJson()),
+        timeout: const Duration(seconds: 7),
+      );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response != null &&
+          response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        _cache.write('profile_needs_cloud_sync', false);
         _cache.saveProfile(profile);
         return true;
       }
@@ -67,13 +70,45 @@ class ApiClient {
     try {
       final saved = await SupabaseService().saveUserProfile(profile);
       if (saved) {
+        _cache.write('profile_needs_cloud_sync', false);
         _cache.saveProfile(profile);
         return true;
       }
     } catch (_) {}
 
+    // Offline resilience: save locally and flag for automatic cloud sync on next launch
+    _cache.write('profile_needs_cloud_sync', true);
     _cache.saveProfile(profile);
     return true;
+  }
+
+  /// Automatically syncs any local-only profile (or pending cloud sync) up to Supabase public.users
+  Future<void> syncPendingProfileIfNeeded() async {
+    final currentUser = SupabaseService().currentUser;
+    if (currentUser == null) return;
+
+    final localProfile = _cache.loadProfile();
+    if (localProfile == null || localProfile.id.startsWith('guest-')) return;
+
+    final needsSync = _cache.read<bool>('profile_needs_cloud_sync') ?? false;
+    final alignedProfile = localProfile.id == currentUser.id
+        ? localProfile
+        : localProfile.copyWith(id: currentUser.id);
+
+    if (needsSync) {
+      await submitOnboarding(alignedProfile);
+      return;
+    }
+
+    // Also heal accounts that have a local profile with academics/targets but a sparse DB row
+    try {
+      final remote = await SupabaseService().fetchUserProfile(currentUser.id);
+      if (remote == null ||
+          (remote.targetSelections.isEmpty &&
+              alignedProfile.targetSelections.isNotEmpty)) {
+        await submitOnboarding(alignedProfile);
+      }
+    } catch (_) {}
   }
 
   /// Fetch Candidate Profile strictly through Fastify Core API (with Supabase fallback)

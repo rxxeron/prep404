@@ -19,6 +19,8 @@ import '../../../battle/presentation/widgets/battle_arena_view.dart';
 import '../../../practice_map/presentation/screens/admission_hiking_roadmap_screen.dart';
 import '../../../question_bank/presentation/screens/question_bank_screen.dart';
 import '../../../exam/presentation/screens/daily_exam_arena_screen.dart';
+import '../../../exam/presentation/screens/leaderboard_screen.dart';
+import '../../../ai_mentor/presentation/screens/ai_mentor_chat_screen.dart';
 import '../../../analytics/presentation/screens/exam_history_screen.dart';
 import '../../../analytics/presentation/screens/study_streak_detail_screen.dart';
 import 'notification_center_screen.dart';
@@ -464,7 +466,34 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 onPracticeMistakes: () => _switchTab(2),
               ),
             ),
+
+            // Tab 5: Explicit Live Leaderboard (University + National)
+            TickerMode(
+              enabled: _currentTabIndex == 5,
+              child: LeaderboardScreen(
+                userId: _currentProfile.id,
+                targetUniversityKeys:
+                    _currentProfile.targetSelections.keys.toList(),
+              ),
+            ),
           ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'ask_bhaiya_fab',
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AiMentorChatScreen()),
+          );
+        },
+        backgroundColor: colors.deepPlum,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.psychology_alt_rounded, size: 20),
+        label: const Text(
+          'Ask Bhaiya',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
         ),
       ),
       bottomNavigationBar: SafeArea(

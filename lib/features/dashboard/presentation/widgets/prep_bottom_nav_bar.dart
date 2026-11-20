@@ -49,6 +49,11 @@ class PrepBottomNavBar extends StatelessWidget {
         activeIcon: Icons.history_rounded,
         inactiveIcon: Icons.history_outlined,
       ),
+      const NavItemData(
+        label: 'Ranks',
+        activeIcon: Icons.emoji_events_rounded,
+        inactiveIcon: Icons.emoji_events_outlined,
+      ),
     ];
 
     return Container(

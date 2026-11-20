@@ -155,6 +155,8 @@ class _RootFlowControllerState extends ConsumerState<RootFlowController> {
     _userProfile = cachedProfile?.id == authUser?.id ? cachedProfile : null;
     if (_isAuthenticated && _userProfile == null && authUser != null) {
       unawaited(_fetchRemoteProfile(authUser.id));
+    } else if (_isAuthenticated && _userProfile != null) {
+      unawaited(ApiClient().syncPendingProfileIfNeeded());
     }
   }
 

@@ -173,7 +173,16 @@ class MilestoneDetailsSheet extends StatelessWidget {
               const SizedBox(width: 10),
               _buildSpecBox(Icons.bolt_rounded, '+${item.totalQuestions * 10}', 'XP Reward', colorSunshine),
               const SizedBox(width: 10),
-              _buildSpecBox(Icons.warning_amber_rounded, '-${item.negativeMark}', 'Penalty', const Color(0xFFFF5722)),
+              _buildSpecBox(
+                item.negativeMark == 0
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.warning_amber_rounded,
+                item.negativeMark == 0 ? 'None' : '-${item.negativeMark}',
+                'Penalty',
+                item.negativeMark == 0
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFFF5722),
+              ),
             ],
           ),
           const SizedBox(height: 24),

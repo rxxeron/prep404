@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/university_roadmap_service.dart';
+import '../../../../core/utils/app_sorter.dart';
 import '../../../../core/widgets/university_logo.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -18,11 +19,17 @@ class DailyExamUniversityFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final sorted = List<UniversityRoadmapData>.from(roadmaps)
+      ..sort((a, b) {
+        if (a.key == activeKey) return -1;
+        if (b.key == activeKey) return 1;
+        return AppSorter.compareAZ09(a.shortCode, b.shortCode);
+      });
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: roadmaps.map((r) {
+        children: sorted.map((r) {
           final isSelected = r.key == activeKey;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
