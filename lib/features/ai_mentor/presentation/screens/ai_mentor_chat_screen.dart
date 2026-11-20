@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/repositories/ai_mentor_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../widgets/prep_markdown_math_view.dart';
 
 /// Prep404 Bhaiya — Senior Brother AI Mentor Chat
 /// Streams real-time replies from the Lab PC Gemma 4 fleet (via Cloudflare Tunnels)
@@ -594,9 +595,10 @@ class _AiMentorChatScreenState extends State<AiMentorChatScreen> {
                 ],
               )
             else
-              SelectableText(
-                msg.content,
-                style: TextStyle(
+              PrepMarkdownMathView(
+                data: msg.content,
+                isUserBubble: isUser,
+                baseStyle: TextStyle(
                   fontSize: 14,
                   height: 1.45,
                   color: isUser ? Colors.white : colors.textPrimary,
